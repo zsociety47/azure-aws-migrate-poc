@@ -1,0 +1,36 @@
+# Provider plugins downloaded by terraform init. Rebuilt locally, not committed.
+.terraform/
+
+# Terraform's memory of what it created. Holds resource IDs, and for this
+# project the discovery-account password. Never commit it.
+*.tfstate
+*.tfstate.*
+
+# Written when Terraform crashes. May contain a partial state snapshot.
+crash.log
+crash.*.log
+
+# A saved plan can contain the same sensitive values as the state.
+*.tfplan
+
+# Variable files are where the appliance password would land. The example
+# file is named terraform.tfvars.example, so this pattern does not hide it.
+*.tfvars
+*.tfvars.json
+
+# Local-only overrides. Not part of the shared configuration.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Secure Shell (SSH) private key used to retrieve the Windows Administrator
+# password from AWS. The public half can be regenerated from the private key.
+keys/
+*.pem
+
+# Environment variables, if a password is exported from a local file.
+.env
+.env.*
+
+.DS_Store
