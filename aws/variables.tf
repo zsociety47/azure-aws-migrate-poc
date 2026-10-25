@@ -76,6 +76,33 @@ variable "source_computer_name" {
   default     = "src-zeon"
 }
 
+variable "discovery_username" {
+  description = "Local administrator the discovery appliance uses over Windows Remote Management. This is not the built-in Administrator account."
+  type        = string
+  default     = "migrateadmin"
+}
+
+variable "discovery_password" {
+  description = "Password for the discovery administrator. It has no default, so it is typed at plan time and is not saved in this file. At least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      length(var.discovery_password) >= 12 &&
+      length(regexall("[A-Z]", var.discovery_password)) > 0 &&
+      length(regexall("[a-z]", var.discovery_password)) > 0 &&
+      length(regexall("[0-9]", var.discovery_password)) > 0 &&
+      length(regexall("[^A-Za-z0-9]", var.discovery_password)) > 0 &&
+      !strcontains(var.discovery_password, "\"") &&
+      !strcontains(var.discovery_password, "$") &&
+      !strcontains(var.discovery_password, "`") &&
+      !strcontains(lower(var.discovery_password), lower(var.discovery_username))
+    )
+    error_message = "Use at least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Do not include a double quote, a dollar sign, or a backtick, and do not include the username."
+  }
+}
+
 variable "source_instance_type" {
   description = "EC2 instance type for the source server. t3.medium is 2 vCPU and 4 GB."
   type        = string
@@ -116,6 +143,12 @@ variable "replication_cache_volume_size_gb" {
   description = "Cache disk size of the replication appliance, in gibibytes. The appliance requires 620."
   type        = number
   default     = 620
+}
+
+variable "replication_cache_volume_name" {
+  description = "Name tag of the cache disk on the replication appliance."
+  type        = string
+  default     = "vol-migrate-repl-zeon"
 }
 
 variable "tags" {
