@@ -11,8 +11,13 @@
 #
 # get_password_data waits for the built-in Administrator password, the
 # same way the source server does. Remote Desktop uses that password.
+#
+# The appliance is 8 virtual CPUs and the source is 2. The Standard
+# quota is 8, so both cannot run together. count leaves the appliance
+# and the cache disk out until replication_instance_enabled is true.
 
 resource "aws_instance" "replication" {
+  count                  = var.replication_instance_enabled ? 1 : 0
   ami                    = data.aws_ami.windows_2022.id
   instance_type          = var.replication_instance_type
   subnet_id              = aws_subnet.subnet.id
@@ -36,6 +41,7 @@ resource "aws_instance" "replication" {
 }
 
 resource "aws_ebs_volume" "replication_cache" {
+  count             = var.replication_instance_enabled ? 1 : 0
   availability_zone = aws_subnet.subnet.availability_zone
   size              = var.replication_cache_volume_size_gb
   type              = "gp3"
@@ -47,7 +53,8 @@ resource "aws_ebs_volume" "replication_cache" {
 }
 
 resource "aws_volume_attachment" "replication_cache" {
+  count       = var.replication_instance_enabled ? 1 : 0
   device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.replication_cache.id
-  instance_id = aws_instance.replication.id
+  volume_id   = aws_ebs_volume.replication_cache[count.index].id
+  instance_id = aws_instance.replication[count.index].id
 }

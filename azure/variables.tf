@@ -55,9 +55,27 @@ variable "network_security_group_name" {
 }
 
 variable "discovery_virtual_machine_name" {
-  description = "Name of the discovery appliance virtual machine. The virtual machine file comes later."
+  description = "Name of the discovery appliance virtual machine."
   type        = string
   default     = "vm-appl-zeon"
+}
+
+variable "discovery_virtual_machine_size" {
+  description = "Size of the discovery appliance. Standard_D8as_v4 is 8 vCPU and 32 GB, which is the appliance minimum, and this subscription has quota for that family in East US."
+  type        = string
+  default     = "Standard_D8as_v4"
+}
+
+variable "discovery_os_disk_name" {
+  description = "Name of the operating-system disk on the discovery appliance."
+  type        = string
+  default     = "osdisk-appl-zeon"
+}
+
+variable "discovery_admin_username" {
+  description = "Local administrator on the discovery appliance. This is the sign-in for that virtual machine, not the account on the source server."
+  type        = string
+  default     = "migrateadmin"
 }
 
 variable "discovery_computer_name" {
@@ -70,6 +88,40 @@ variable "discovery_appliance_name" {
   description = "Name typed into the Azure Migrate portal for the discovery appliance. Letters and numbers only, 14 characters maximum."
   type        = string
   default     = "migapplzeon01"
+}
+
+variable "discovery_public_ip_name" {
+  description = "Name of the public IP address on the discovery appliance. The network interface attaches it."
+  type        = string
+  default     = "pip-appl-zeon"
+}
+
+variable "discovery_network_interface_name" {
+  description = "Name of the network interface on the discovery appliance. It joins the public address to the subnet."
+  type        = string
+  default     = "nic-appl-zeon"
+}
+
+variable "discovery_admin_password" {
+  description = "Password for the local administrator on the discovery appliance. It has no default, so it is typed at plan time and is not saved in this file. At least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      length(var.discovery_admin_password) >= 12 &&
+      length(var.discovery_admin_password) <= 123 &&
+      length(regexall("[A-Z]", var.discovery_admin_password)) > 0 &&
+      length(regexall("[a-z]", var.discovery_admin_password)) > 0 &&
+      length(regexall("[0-9]", var.discovery_admin_password)) > 0 &&
+      length(regexall("[^A-Za-z0-9]", var.discovery_admin_password)) > 0 &&
+      !strcontains(var.discovery_admin_password, "\"") &&
+      !strcontains(var.discovery_admin_password, "$") &&
+      !strcontains(var.discovery_admin_password, "`") &&
+      !strcontains(lower(var.discovery_admin_password), lower(var.discovery_admin_username))
+    )
+    error_message = "Use 12 to 123 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Do not include a double quote, a dollar sign, a backtick, or the username."
+  }
 }
 
 variable "tags" {

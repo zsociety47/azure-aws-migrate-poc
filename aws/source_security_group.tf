@@ -3,9 +3,11 @@
 # that network exists. This block does not attach the firewall to the
 # server. The instance file does that.
 #
-# Remote Desktop is allowed from the operator address only. The Windows
-# Remote Management rule is added when the discovery appliance in Azure
-# has a public address.
+# Remote Desktop is allowed from the operator address only. The
+# replication appliance installs the Mobility service from this subnet,
+# so ports 445, 135, and 5985 are open to the subnet. Windows Remote
+# Management from the discovery appliance is a separate rule, and only
+# when discovery_winrm_cidr is set to that appliance's public /32.
 #
 # The egress rule lets the server start connections. Replication sends
 # disk changes to the appliance, and Windows uses outbound internet for
@@ -23,6 +25,41 @@ resource "aws_security_group" "source" {
     to_port     = 3389
     protocol    = "tcp"
     cidr_blocks = [local.operator_cidr]
+  }
+
+  ingress {
+    description = "Mobility file copy from the replication appliance"
+    from_port   = 445
+    to_port     = 445
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  ingress {
+    description = "Mobility remote procedure call from the replication appliance"
+    from_port   = 135
+    to_port     = 135
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  ingress {
+    description = "Windows Remote Management from the replication appliance"
+    from_port   = 5985
+    to_port     = 5985
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  dynamic "ingress" {
+    for_each = var.discovery_winrm_cidr == "" ? [] : [var.discovery_winrm_cidr]
+    content {
+      description = "Windows Remote Management from the discovery appliance"
+      from_port   = 5985
+      to_port     = 5985
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   egress {

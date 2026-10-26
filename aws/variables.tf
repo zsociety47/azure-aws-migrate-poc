@@ -103,6 +103,17 @@ variable "discovery_password" {
   }
 }
 
+variable "discovery_winrm_cidr" {
+  description = "Public address of the discovery appliance, with a /32 prefix. Leave this empty until pip-appl-zeon exists. It is not saved in this file."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.discovery_winrm_cidr == "" || can(cidrhost(var.discovery_winrm_cidr, 0))
+    error_message = "Use the discovery public address with a /32 prefix, or leave it empty."
+  }
+}
+
 variable "source_instance_type" {
   description = "EC2 instance type for the source server. t3.medium is 2 vCPU and 4 GB."
   type        = string
@@ -113,6 +124,12 @@ variable "source_volume_size_gb" {
   description = "Root disk size of the source server, in gibibytes."
   type        = number
   default     = 30
+}
+
+variable "replication_instance_enabled" {
+  description = "Create the replication appliance and its cache disk. Leave this false while the Standard virtual CPU quota is below 10. Discovery uses the source server only."
+  type        = bool
+  default     = false
 }
 
 variable "replication_instance_name" {
