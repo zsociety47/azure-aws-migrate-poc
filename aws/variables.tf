@@ -127,7 +127,7 @@ variable "source_volume_size_gb" {
 }
 
 variable "replication_instance_enabled" {
-  description = "Create the replication appliance and its cache disk. Leave this false while the Standard virtual CPU quota is below 10. Discovery uses the source server only."
+  description = "Create the replication appliance and its cache disk. Leave this false until the Running On-Demand Standard quota L-1216C47A in us-east-1 is at least 10. The source is 2 vCPUs and this appliance is 8, and both must be running. Request 10. A larger request is more likely to wait on a person. If a higher request is already open, leave it. Discovery does not use this appliance."
   type        = bool
   default     = false
 }
@@ -145,7 +145,7 @@ variable "replication_computer_name" {
 }
 
 variable "replication_instance_type" {
-  description = "EC2 instance type for the replication appliance. c5.2xlarge is 8 vCPU and 16 GB."
+  description = "EC2 instance type for the replication appliance. c5.2xlarge is 8 vCPU and 16 GB, which is Microsoft's minimum for the replication appliance. A smaller type fails that check. Count it against quota L-1216C47A together with the source."
   type        = string
   default     = "c5.2xlarge"
 }

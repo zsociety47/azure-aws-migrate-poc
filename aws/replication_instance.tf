@@ -12,9 +12,20 @@
 # get_password_data waits for the built-in Administrator password, the
 # same way the source server does. Remote Desktop uses that password.
 #
-# The appliance is 8 virtual CPUs and the source is 2. The Standard
-# quota is 8, so both cannot run together. count leaves the appliance
-# and the cache disk out until replication_instance_enabled is true.
+# The appliance is 8 virtual CPUs and the source is 2. Both have to be
+# running, so the Running On-Demand Standard quota L-1216C47A in
+# us-east-1 has to be at least 10. A new account is often still at 8.
+# Request 10 before setting replication_instance_enabled to true. A
+# larger jump is more likely to wait on a person. If a higher request
+# is already open, leave it. count leaves the appliance and the cache
+# disk out until that variable is true.
+#
+# This machine stays in the source virtual private cloud. Azure Migrate
+# requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB
+# here, beside the source. The process server on this instance receives
+# disk blocks on TCP 9443, compresses them, and uploads them to Azure.
+# A smaller instance fails that check. An appliance in Azure is on the
+# wrong side of the copy.
 
 resource "aws_instance" "replication" {
   count                  = var.replication_instance_enabled ? 1 : 0

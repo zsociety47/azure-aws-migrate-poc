@@ -15,9 +15,11 @@ The walkthrough is not recorded yet.
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
-The design picture below is the reference. The [Architecture](#architecture) diagram is the live map. If a name disagrees, the Terraform files win. The picture was exported before the Mobility service ports were added to the source firewall.
+The design picture below is the reference. The [Architecture](#architecture) diagram is the live map. If a name disagrees, the Terraform files win.
 
 ![Design picture of the AWS source, the replication appliance, and the Azure target network](docs/architecture/architecture.png)
+
+*Reference picture. On that picture, a solid box is built with Terraform, a dashed box is made in the portal or at cutover, and a dotted box is declared and not created yet.*
 
 ---
 
@@ -43,7 +45,29 @@ discovery_password = "<your-password>"
 
 Use at least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`.
 
-The Running On-Demand Standard virtual CPU (vCPU) quota in `us-east-1` was 8 when last checked. The source server needs 2 and the replication appliance needs 8, so both cannot run. `replication_instance_enabled` defaults to false, and an apply then creates the network and the source only. Turn it on after quota `L-1216C47A` is at least 10.
+Check the Running On-Demand Standard virtual CPU (vCPU) quota before you create the replication appliance. In `us-east-1` the quota code is `L-1216C47A`. A new account often has an applied value of 8. The source server is a `t3.medium`, which is 2 vCPUs. The replication appliance is a `c5.2xlarge`, which is 8 vCPUs, because Azure Migrate requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB on a machine in the same virtual private cloud (VPC) as the source. Both have to be running at the same time, so the applied quota has to be at least 10. A stopped instance does not count, and replication needs both of them up.
+
+Request **10**. A larger jump is more likely to wait on a person. If a higher request is already open, leave it. Do not file a second one. Other On-Demand families are often 0, so a different instance family does not avoid this quota. The discovery virtual machine uses 8 Azure virtual CPUs on its own, so check the Azure regional quota before adding a second appliance beside it.
+
+```bash
+aws service-quotas get-service-quota \
+  --service-code ec2 \
+  --quota-code L-1216C47A \
+  --region us-east-1 \
+  --query 'Quota.Value'
+```
+
+File the increase only when the value is below 10 and no request is already open:
+
+```bash
+aws service-quotas request-service-quota-increase \
+  --service-code ec2 \
+  --quota-code L-1216C47A \
+  --desired-value 10 \
+  --region us-east-1
+```
+
+`replication_instance_enabled` stays false until that applied value is at least 10. An apply then creates the network and the source only. Discovery uses the source and the Azure appliance. It does not use the replication appliance, and moving that appliance into Azure does not remove the requirement.
 
 ### Step 1: Keep secrets off GitHub
 
@@ -143,7 +167,7 @@ The source guest script enables WinRM on TCP 5985, allows unencrypted Basic auth
 
 The cache disk is its own `aws_ebs_volume` attached at `/dev/sdf`. It is left unformatted. The portal installer uses it later. `DRInstaller.ps1` is not in the guest script.
 
-`replication_instance_enabled` defaults to false. A plan then creates the network and `ec2-migrate-src-zeon` only. The source is 2 virtual CPUs, which fits the quota of 8. Set the variable to true after quota `L-1216C47A` is at least 10. That adds `ec2-migrate-repl-zeon` and the 620 GiB cache disk. Discovery does not need that appliance.
+`replication_instance_enabled` defaults to false. Leave it false until the applied value of quota `L-1216C47A` is at least 10. Request 10 if the applied value is still 8. A plan then creates the network and `ec2-migrate-src-zeon` only. Setting the variable to true adds `ec2-migrate-repl-zeon` and the 620 GiB cache disk. Discovery does not need that appliance.
 
 ```bash
 cd aws
@@ -216,7 +240,7 @@ terraform plan
 
 ### Step 10: Clean up when you're done
 
-The teardown script is not written. Nothing in this repository has been applied, so there is nothing to delete yet.
+The teardown script is not written. Both sides are applied. Tear them down the same day when the portal work is finished.
 
 When the build has been applied, tear it down the same day. The appliance is 8 vCPU with a 620 GiB cache disk. After cutover, `terraform destroy` in `azure/` will miss the virtual machine, the vault, and the cache storage, because the portal creates those. The planned cleanup is `az group delete` on `rg-migrate-src-zeon01` and `rg-migrate-tgt-zeon01`, after the group name is typed. In `aws/`, `terraform destroy` removes the network and the instances. The nightly sweep leaves AWS virtual networks in place, and these AWS resources are not tagged `lifetime=1d`.
 
@@ -283,9 +307,13 @@ terraform plan
 
 Do not apply yet. An AWS apply with the default switch creates the network and the source, which fits the quota of 8. It does not create the replication appliance. Azure apply creates the discovery virtual machine, which bills by the hour. Those groups are tagged `lifetime=1d`, so the nightly sweep can delete them.
 
-### Verify
+### Verify the AWS side
 
-No verify script exists. The checks in [Success criteria](#success-criteria) are the ones this project has to pass after a real migration.
+```bash
+./scripts/verify-aws.sh
+```
+
+The script reads the live virtual private cloud, the source server, and the source firewall. It prints a pass or fail line for each check and does not print public addresses. The replication appliance is allowed to be off. A running appliance passes only when it is `c5.2xlarge` with a 620 GiB cache disk. The checks in [Success criteria](#success-criteria) still cover discovery, replication, and cutover, which this script does not.
 
 ### Teardown
 
@@ -297,48 +325,56 @@ No teardown script exists. See [Step 10](#step-10-clean-up-when-youre-done).
 
 ![Design picture of the AWS source, the replication appliance, and the Azure target network](docs/architecture/architecture.png)
 
-*Reference picture. On that picture, a solid line means Terraform, a dashed line means the portal or cutover, and a dotted line means not written yet.*
+*Reference picture. On that picture, a solid box is built with Terraform, a dashed box is made in the portal or at cutover, and a dotted box is declared and not created yet.*
 
 ```mermaid
 flowchart LR
-    operator["Operator"]
+    operator["Your Mac<br/>Terraform and Remote Desktop"]
 
-    subgraph awsnet["vpc-migrate-zeon · us-east-1"]
+    subgraph awsnet["AWS · us-east-1 · vpc-migrate-zeon"]
         source["ec2-migrate-src-zeon<br/>source server"]
-        repl["ec2-migrate-repl-zeon<br/>replication appliance"]
+        repl["ec2-migrate-repl-zeon<br/>declared, switched off"]
     end
 
     subgraph azure["Azure · East US"]
-        migrate["Azure Migrate<br/>portal · not in Terraform"]
-        subgraph tgt["vnet-migrate-zeon · 10.6.0.0/16"]
+        subgraph staging["rg-migrate-src-zeon01 · lifetime=1d"]
             discovery["vm-appl-zeon<br/>discovery appliance"]
-            landed["migrated server<br/>cutover · not written"]
+            cache["Cache and vault<br/>made by the portal"]
+            migrate["Azure Migrate project<br/>portal"]
+        end
+        subgraph tgt["rg-migrate-tgt-zeon01 · lifetime=1d"]
+            vnet["vnet-migrate-zeon<br/>10.6.0.0/16"]
+            nsg["Firewall (NSG)<br/>Remote Desktop from your IP only"]
+            landed["Migrated Windows VM<br/>cutover, not in Terraform"]
         end
     end
 
-    operator -- "TCP 3389" --> source
-    operator -- "TCP 3389" --> repl
-    source -- "TCP 443 and 9443" --> repl
-    repl -- "HTTPS 443" --> migrate
-    discovery -. "WinRM TCP 5985 · public rule not written" .-> source
+    operator -- "Terraform apply" --> source
+    operator -- "Terraform apply" --> vnet
+    discovery -- "WinRM TCP 5985" --> source
+    discovery -- "inventory" --> migrate
+    source -. "TCP 443 and 9443" .-> repl
+    repl -. "HTTPS 443" .-> cache
+    cache --> migrate
+    nsg -- "attached to the subnet" --> vnet
     migrate -. "cutover" .-> landed
 
     classDef azure fill:#0078d4,stroke:#005a9e,color:#fff
     classDef external fill:#6e7681,stroke:#484f58,color:#fff
 
-    class migrate,discovery,landed azure
-    class operator,source,repl external
+    class discovery,cache,migrate,vnet,nsg,landed azure
+    class operator,source,repl,awsnet external
 ```
 
-*Live map. A solid arrow is traffic the firewall files allow today. A dashed arrow is a path that is designed and not in the files yet. Gray is AWS. Blue is Azure. Disk changes go from the source to the appliance on TCP 443 and 9443, then from the appliance to Azure on HTTPS 443. The discovery appliance, once written, will sit on `snet-migrate` and read the source over WinRM.*
+*Live map. A solid arrow is in the files today. A dashed arrow is portal or cutover, or it waits on the replication appliance. Gray is AWS. Blue is Azure.*
 
 ### How to read this diagram
 
-- The operator reaches either Windows machine only on TCP 3389, and only from the address collected at plan time.
-- The source and the appliance share `10.0.1.0/24`. The appliance installs the Mobility service on the source over TCP 445, 135, and 5985.
-- `vm-appl-zeon` is a Windows Server 2022 virtual machine, size `Standard_D8as_v4`, on `nic-appl-zeon`. The WinRM rule from `pip-appl-zeon` is not written on the source yet. The subnet firewall allows that virtual machine to start TCP 443 and TCP 5985 outbound.
-- The migrated server is created at cutover by Azure Migrate. Terraform does not declare it, the vault, or the cache storage account.
-- The discovery appliance will use the subnet in the target virtual network and will be recorded in the staging resource group.
+- The operator reaches Windows machines only on TCP 3389, and only from the address collected at plan time.
+- The source and the appliance share `10.0.1.0/24`. The appliance, when it exists, installs the Mobility service on the source over TCP 445, 135, and 5985.
+- `vm-appl-zeon` is running in the staging group, on `snet-migrate` in the target virtual network. The source firewall allows TCP 5985 from that appliance's address. The installer has not been run.
+- The replication appliance is declared and switched off until the virtual CPU quota reaches 10.
+- The migrated server, the vault, and the cache storage account are created by Azure Migrate. Terraform does not declare them.
 
 ---
 
@@ -378,6 +414,8 @@ aws/
   guest/replication-setup.ps1     renames the appliance
   source_instance.tf              Windows source server
   replication_instance.tf         appliance and the separate 620 GiB cache disk
+scripts/
+  verify-aws.sh                   live AWS checks; does not apply or print addresses
 azure/
   versions.tf                     pins Terraform 1.15, AzureRM 5.11.0, HTTP provider 3.6.3
   provider.tf                     signs in with the Azure CLI
@@ -415,8 +453,9 @@ Plan on about 10 to 15 US dollars if both clouds are destroyed the same day. The
 
 ## Going further
 
-- After the next apply, set `discovery_winrm_cidr` to the new `pip-appl-zeon` address with `/32`, apply the AWS root again, then run `AzureMigrateInstaller.ps1` from the portal on `vm-appl-zeon`.
-- Set `replication_instance_enabled` to true after quota `L-1216C47A` is at least 10, install `DRInstaller.ps1` from the portal onto `ec2-migrate-repl-zeon`, then enable replication.
+- The appliance Login button signs in by a device code, which is a code you paste into a browser. Security defaults block that sign-in, and the page shows error 530035. A directory without a paid Microsoft Entra ID license cannot make an exception for that one sign-in. Turn security defaults off before Login: Microsoft Entra ID, Properties, Security defaults, Disabled, then Save. Leave them off until the replication appliance signs in the same way. Stay on the Login button. A separate application and certificate skips those screens, and it cannot register the replication appliance.
+- Run `AzureMigrateInstaller.ps1` from the portal on `vm-appl-zeon`. The discovery address is already in `discovery_winrm_cidr`.
+- Request quota `L-1216C47A` at 10 if it is still 8, then set `replication_instance_enabled` to true, install `DRInstaller.ps1` from the portal onto `ec2-migrate-repl-zeon`, and enable replication. Leave a higher request alone if one is already open.
 - Confirm on the first replication whether TCP 443 and 9443 need to be allowed in both directions inside the subnet.
 - Add `lifetime`, `owner`, `project`, and `created` to the AWS resources so the sweep can see the instances.
 - Write the teardown script that deletes both Azure groups after the portal has created the vault and the migrated server.
@@ -431,10 +470,12 @@ Plan on about 10 to 15 US dollars if both clouds are destroyed the same day. The
 - **The Windows password needs an RSA key.** An ED25519 key cannot decrypt the Administrator password AWS returns. `ssh-keygen -t rsa -b 2048 -m PEM` writes the PEM header `-----BEGIN RSA PRIVATE KEY-----`, which `aws_instance` can use. `get_password_data = true` waits during apply until that password exists.
 - **A security group name cannot start with `sg-`.** AWS rejected that prefix. The firewalls are `migrate-src-sg-zeon` and `migrate-repl-sg-zeon`.
 - **EBS encryption by default was false.** The source disk and the cache disk set `encrypted = false` so the volume matches the account default that was checked.
-- **The vCPU quota blocks apply.** Quota `L-1216C47A`, Running On-Demand Standard (A, C, D, H, I, M, R, T, Z), had an applied value of 8. The source and the appliance together need 10 while both are running. Apply was not run.
+- **The Standard vCPU quota blocks the replication appliance.** Quota `L-1216C47A`, Running On-Demand Standard (A, C, D, H, I, M, R, T, Z), had an applied value of 8 in `us-east-1`. The source is 2 vCPUs and the appliance is 8, and replication needs both running, so the applied value has to be at least 10. Request 10. A larger number is more likely to be reviewed by a person. This account already had a higher request open, and that request was left as filed. The source was applied with `replication_instance_enabled` false and later destroyed. The replication instance was not created.
+- **The replication appliance stays in the source VPC.** Azure Migrate runs a configuration server and a process server on that machine. The process server receives disk blocks from the Mobility service on the source over TCP 9443, compresses and encrypts them, holds them on the cache disk, and uploads them to Azure over HTTPS 443. Microsoft requires 8 cores, 16 GB of memory, a separate cache disk of at least 600 GB, and a machine in the same VPC as the source. A smaller size fails that check. Putting the appliance in Azure leaves it on the wrong side of the copy, and this proof does not do that.
 - **The earlier plan is stale.** That plan reported `12 to add, 0 to change, 0 to destroy` before the Mobility ingress rules. Plan again before apply. The plan file was deleted because it contained the operator public address.
 - **PowerShell dollars in `templatefile`.** Terraform interpolates `${name}`. A PowerShell `$` in the guest script has to be written `$$`, or avoided. The scripts pass the computer name, the username, and the password in as Terraform variables.
 - **The cache disk is a separate resource.** Putting it in `ebs_block_device` would replace the instance when the disk changes. `aws_ebs_volume` plus `aws_volume_attachment` keeps the instance stable.
 - **The NSG attaches in its own file.** This provider has no `network_security_group_id` argument on the subnet. `azurerm_subnet_network_security_group_association` is the attachment.
 - **`created` would change every plan.** `timestamp()` is a new value each run. `lifecycle { ignore_changes = [tags["created"]] }` keeps the first value.
 - **The configuration server is retired.** Microsoft retired the classic configuration server on 2026-09-30. This build uses the simplified replication appliance, still installed later with `DRInstaller.ps1`.
+- **Security defaults block the appliance Login.** Error 530035 means the sign-in was blocked by security defaults. The Login button uses a device code against Microsoft Azure PowerShell. This directory has no premium license, so conditional access cannot allow that one flow. A preconfigured application and certificate would also skip Login. That path is not used here. A reader would not be looking at the same screens, and Microsoft does not support it for the replication appliance.
