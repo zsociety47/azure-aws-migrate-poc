@@ -7,5 +7,9 @@
 resource "azurerm_resource_group" "staging" {
   name     = var.staging_resource_group_name
   location = var.location
-  tags     = var.tags
+  tags     = local.tags
+
+  lifecycle {
+    ignore_changes = [tags["created"]]
+  }
 }

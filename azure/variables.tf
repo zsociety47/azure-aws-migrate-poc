@@ -73,10 +73,10 @@ variable "discovery_appliance_name" {
 }
 
 variable "tags" {
-  description = "Tags on every Azure resource in this build."
+  description = "Base tags. lifetime and created are added in tags.tf. project is the folder name."
   type        = map(string)
   default = {
-    project     = "azure-aws-migrate-poc"
+    project     = "06-aws-to-azure-migrate-poc"
     environment = "poc"
     managed-by  = "terraform"
     owner       = "zeon"

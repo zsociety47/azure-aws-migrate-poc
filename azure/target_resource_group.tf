@@ -6,5 +6,9 @@
 resource "azurerm_resource_group" "target" {
   name     = var.target_resource_group_name
   location = var.location
-  tags     = var.tags
+  tags     = local.tags
+
+  lifecycle {
+    ignore_changes = [tags["created"]]
+  }
 }
