@@ -252,7 +252,21 @@ When the build has been applied, tear it down the same day. The appliance is 8 v
 
 ### Run this as yourself
 
-The names in `aws/variables.tf` and `azure/variables.tf` are this proof of concept. Copy each `terraform.tfvars.example` next to its `variables.tf` to `terraform.tfvars` (gitignored). Change every name that includes `zeon`, both `owner` tags, and the Azure Migrate appliance name (`migapplzeon01` is globally unique). Do not copy my AWS key names or Azure resource group names.
+The names committed in this repository are this proof of concept. Leave the two `variables.tf` files. Put your owner word in the copies you run. The sequence is the same as the [naming standard](https://github.com/zsociety47/cloud-projects/blob/main/standards/NAMING-STANDARD.md): type, project or role, then **your** owner word (`rg-migrate-src-zeon01` becomes `rg-migrate-src-ada01`). The Azure Migrate appliance name is globally unique; `migapplzeon01` cannot stay.
+
+This repository has two Terraform roots. Copy an example in each folder.
+
+| Open this | Do this |
+|---|---|
+| [`aws/terraform.tfvars.example`](aws/terraform.tfvars.example) | Copy to `aws/terraform.tfvars` (gitignored). Replace every `yourname` with your owner word, including `tags.owner`. Do not copy the key pair name `key-migrate-zeon`. |
+| [`aws/variables.tf`](aws/variables.tf) | Read only. These defaults are this proof. |
+| [`azure/terraform.tfvars.example`](azure/terraform.tfvars.example) | Copy to `azure/terraform.tfvars` (gitignored). Replace every `yourname` with your owner word, including `tags.owner` and `discovery_appliance_name`. |
+| [`azure/variables.tf`](azure/variables.tf) | Read only. These defaults are this proof. |
+
+```bash
+cp aws/terraform.tfvars.example aws/terraform.tfvars
+cp azure/terraform.tfvars.example azure/terraform.tfvars
+```
 
 Run the AWS root and the Azure root separately. Each one keeps its own local state file.
 
