@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars in this folder (gitignored).
+# Change every name that includes zeon, and the owner tag.
+# Do not put the appliance password here.
+
+staging_resource_group_name      = "rg-migrate-src-yourname01"
+target_resource_group_name       = "rg-migrate-tgt-yourname01"
+virtual_network_name             = "vnet-migrate-yourname"
+network_security_group_name      = "nsg-migrate-tgt-yourname"
+discovery_virtual_machine_name   = "vm-appl-yourname"
+discovery_os_disk_name           = "osdisk-appl-yourname"
+discovery_appliance_name         = "migapplyourname01"
+discovery_computer_name          = "appl-yourname"
+discovery_public_ip_name         = "pip-appl-yourname"
+discovery_network_interface_name = "nic-appl-yourname"
+
+tags = {
+  project     = "06-aws-to-azure-migrate-poc"
+  environment = "poc"
+  managed-by  = "terraform"
+  owner       = "yourname"
+}

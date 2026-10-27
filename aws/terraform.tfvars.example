@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars in this folder (gitignored).
+# Change every name that includes zeon, and the owner tag.
+
+vpc_name                       = "vpc-migrate-yourname"
+subnet_name                    = "snet-migrate-yourname"
+internet_gateway_name          = "igw-migrate-yourname"
+route_table_name               = "rt-migrate-yourname"
+source_security_group_name     = "migrate-src-sg-yourname"
+replication_security_group_name = "migrate-repl-sg-yourname"
+key_pair_name                  = "key-migrate-yourname"
+source_instance_name           = "ec2-migrate-src-yourname"
+source_computer_name           = "src-yourname"
+
+tags = {
+  project     = "azure-aws-migrate-poc"
+  environment = "poc"
+  managed-by  = "terraform"
+  owner       = "yourname"
+}

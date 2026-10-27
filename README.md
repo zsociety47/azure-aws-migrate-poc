@@ -250,6 +250,10 @@ When the build has been applied, tear it down the same day. The appliance is 8 v
 
 ## Automated setup
 
+### Run this as yourself
+
+The names in `aws/variables.tf` and `azure/variables.tf` are this proof of concept. Copy each `terraform.tfvars.example` next to its `variables.tf` to `terraform.tfvars` (gitignored). Change every name that includes `zeon`, both `owner` tags, and the Azure Migrate appliance name (`migapplzeon01` is globally unique). Do not copy my AWS key names or Azure resource group names.
+
 Run the AWS root and the Azure root separately. Each one keeps its own local state file.
 
 ### Sign in
