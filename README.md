@@ -2,7 +2,7 @@
 
 ## Watch the walkthrough
 
-The walkthrough is not recorded yet.
+The walkthrough isn't recorded yet.
 
 **Author:** Zeon Stewart, [LinkedIn](LINKEDIN_LINK_HERE)
 
@@ -11,7 +11,7 @@ The walkthrough is not recorded yet.
 - **What it is:** a Windows Server on Amazon Web Services (AWS) that Azure Migrate will discover, replicate, and cut over into an Azure virtual network.
 - **What's automated:** Terraform declares the AWS network, the source server, the replication appliance, the Azure network, and the discovery virtual machine. The replication appliance stays out of the first apply while the Standard virtual CPU quota is below 10. The Migrate project, the appliance installer, and the cutover are still portal steps.
 - **Why it's secure:** Remote Desktop is limited to the operator's current public address. Discovery uses a local Windows account over Windows Remote Management (WinRM). No AWS access key is stored for discovery.
-- **Result:** the AWS source and the Azure discovery virtual machine were created, then destroyed the same night. The replication appliance was not created. The portal installer has not been run. A migration has not been run.
+- **Result:** the AWS source and the Azure discovery virtual machine were created, then destroyed the same night. The replication appliance wasn't created. The portal installer hasn't been run. A migration hasn't been run.
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
@@ -45,9 +45,9 @@ discovery_password = "<your-password>"
 
 Use at least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`.
 
-Check the Running On-Demand Standard virtual CPU (vCPU) quota before you create the replication appliance. In `us-east-1` the quota code is `L-1216C47A`. A new account often has an applied value of 8. The source server is a `t3.medium`, which is 2 vCPUs. The replication appliance is a `c5.2xlarge`, which is 8 vCPUs, because Azure Migrate requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB on a machine in the same virtual private cloud (VPC) as the source. Both have to be running at the same time, so the applied quota has to be at least 10. A stopped instance does not count, and replication needs both of them up.
+Check the Running On-Demand Standard virtual CPU (vCPU) quota before you create the replication appliance. In `us-east-1` the quota code is `L-1216C47A`. A new account often has an applied value of 8. The source server is a `t3.medium`, which is 2 vCPUs. The replication appliance is a `c5.2xlarge`, which is 8 vCPUs, because Azure Migrate requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB on a machine in the same virtual private cloud (VPC) as the source. Both have to be running at the same time, so the applied quota has to be at least 10. A stopped instance doesn't count, and replication needs both of them up.
 
-Request **10**. A larger jump is more likely to wait on a person. If a higher request is already open, leave it. Do not file a second one. Other On-Demand families are often 0, so a different instance family does not avoid this quota. The discovery virtual machine uses 8 Azure virtual CPUs on its own, so check the Azure regional quota before adding a second appliance beside it.
+Request **10**. A bigger jump is more likely to sit waiting for a person to approve it. If a higher request is already open, leave it. Don't file a second one. Other On-Demand families are often 0, so a different instance family doesn't avoid this quota. The discovery virtual machine uses 8 Azure virtual CPUs on its own, so check the Azure regional quota before adding a second appliance beside it.
 
 ```bash
 aws service-quotas get-service-quota \
@@ -67,13 +67,13 @@ aws service-quotas request-service-quota-increase \
   --region us-east-1
 ```
 
-`replication_instance_enabled` stays false until that applied value is at least 10. An apply then creates the network and the source only. Discovery uses the source and the Azure appliance. It does not use the replication appliance, and moving that appliance into Azure does not remove the requirement.
+`replication_instance_enabled` stays false until that applied value is at least 10. An apply then creates the network and the source only. Discovery uses the source and the Azure appliance. It doesn't use the replication appliance, and moving that appliance into Azure doesn't remove the requirement.
 
 ### Step 1: Keep secrets off GitHub
 
 *Declared in `.gitignore`, before `terraform init` or `terraform apply`.*
 
-`terraform init` downloads the providers into `.terraform/`. `terraform apply` writes `terraform.tfstate`. State holds resource identifiers and the discovery password. The state files, `*.tfvars`, and the `keys/` folder are ignored. `.terraform.lock.hcl` is not ignored.
+`terraform init` downloads the providers into `.terraform/`. `terraform apply` writes `terraform.tfstate`. State holds resource identifiers and the discovery password. The state files, `*.tfvars`, and the `keys/` folder are ignored. `.terraform.lock.hcl` isn't ignored.
 
 <!-- ![.gitignore excluding state, variable files, and keys](docs/images/step-01-gitignore.png) -->
 
@@ -109,7 +109,7 @@ The last line should be `Terraform has been successfully initialized!`
 | Replication instance | `ec2-migrate-repl-zeon`, computer `repl-zeon`, `c5.2xlarge`, 80 GiB |
 | Cache disk | `vol-migrate-repl-zeon`, 620 GiB |
 
-AWS names cannot start with `sg-`, so the firewall names start with `migrate-`.
+AWS names can't start with `sg-`, so the firewall names start with `migrate-`.
 
 <!-- ![variables.tf with the VPC and instance names](docs/images/step-03-aws-names.png) -->
 
@@ -117,7 +117,7 @@ AWS names cannot start with `sg-`, so the firewall names start with `migrate-`.
 
 *Declared in `aws/vpc.tf`, `aws/internet_gateway.tf`, `aws/subnet.tf`, `aws/route_table.tf`, `aws/route_table_association.tf`, and `aws/operator_ip.tf`.*
 
-The subnet launches public addresses. The route table sends `0.0.0.0/0` through the internet gateway. `operator_ip.tf` reads this machine's public Internet Protocol version 4 (IPv4) address from `https://api.ipify.org` at plan time and keeps it as a `/32`. The address is not written in the file.
+The subnet launches public addresses. The route table sends `0.0.0.0/0` through the internet gateway. `operator_ip.tf` reads this machine's public Internet Protocol version 4 (IPv4) address from `https://api.ipify.org` at plan time and keeps it as a `/32`. The address isn't written in the file.
 
 <!-- ![plan output listing the VPC, subnet, gateway, and route table](docs/images/step-04-aws-network.png) -->
 
@@ -125,7 +125,7 @@ The subnet launches public addresses. The route table sends `0.0.0.0/0` through 
 
 *Declared in `aws/source_security_group.tf` and `aws/replication_security_group.tf`.*
 
-A security group is stateful. The reply to an allowed inbound connection does not need a second rule.
+A security group is stateful. The reply to an allowed inbound connection doesn't need a second rule.
 
 On the source server:
 
@@ -135,7 +135,7 @@ On the source server:
 | TCP 445, 135, and 5985 | `10.0.1.0/24` | the replication appliance installs the Mobility service |
 | all outbound | `0.0.0.0/0` | the server starts its own connections, including replication |
 
-Set `discovery_winrm_cidr` in `aws/terraform.tfvars` to the public address of `pip-appl-zeon` with a `/32` prefix after that address exists. That adds TCP 5985 from the discovery appliance only. Leave the variable empty until then. The address is not written in the repository.
+Set `discovery_winrm_cidr` in `aws/terraform.tfvars` to the public address of `pip-appl-zeon` with a `/32` prefix after that address exists. That adds TCP 5985 from the discovery appliance only. Leave the variable empty until then. The address isn't written in the repository.
 
 On the replication appliance:
 
@@ -159,15 +159,15 @@ mkdir -p keys
 ssh-keygen -t rsa -b 2048 -m PEM -N "" -f keys/id_rsa
 ```
 
-`key_pair.tf` uploads `keys/id_rsa.pub`. The private key stays in `keys/`, which is gitignored. Terraform uses it to read the built-in Administrator password. `get_password_data = true` makes apply wait until AWS has that encrypted password. Do not add an output that prints it.
+`key_pair.tf` uploads `keys/id_rsa.pub`. The private key stays in `keys/`, which is gitignored. Terraform uses it to read the built-in Administrator password. `get_password_data = true` makes apply wait until AWS has that encrypted password. Don't add an output that prints it.
 
 Both instances use the current Windows Server 2022 English full Amazon Machine Image (AMI) owned by Amazon. Disks are unencrypted general purpose SSD (gp3) volumes, because Elastic Block Store (EBS) encryption by default was off on this account when it was checked.
 
 The source guest script enables WinRM on TCP 5985, allows unencrypted Basic authentication, opens the Windows firewall for WinRM and for the Mobility service, sets `LocalAccountTokenFilterPolicy`, creates the local administrator `migrateadmin`, and renames the computer to `src-zeon`. The replication guest script only renames the computer to `repl-zeon`.
 
-The cache disk is its own `aws_ebs_volume` attached at `/dev/sdf`. It is left unformatted. The portal installer uses it later. `DRInstaller.ps1` is not in the guest script.
+The cache disk is its own `aws_ebs_volume` attached at `/dev/sdf`. It's left unformatted. The portal installer uses it later. `DRInstaller.ps1` isn't in the guest script.
 
-`replication_instance_enabled` defaults to false. Leave it false until the applied value of quota `L-1216C47A` is at least 10. Request 10 if the applied value is still 8. A plan then creates the network and `ec2-migrate-src-zeon` only. Setting the variable to true adds `ec2-migrate-repl-zeon` and the 620 GiB cache disk. Discovery does not need that appliance.
+`replication_instance_enabled` defaults to false. Leave it false until the applied value of quota `L-1216C47A` is at least 10. Request 10 if the applied value is still 8. A plan then creates the network and `ec2-migrate-src-zeon` only. Setting the variable to true adds `ec2-migrate-repl-zeon` and the 620 GiB cache disk. Discovery doesn't need that appliance.
 
 ```bash
 cd aws
@@ -209,7 +209,7 @@ terraform init
 
 `10.6.0.0/16` stays clear of the AWS network `10.0.0.0/16`. The portal name is letters and numbers, 13 characters, under the 14-character limit.
 
-Both groups get `lifetime=1d`, `owner=zeon`, `project=06-aws-to-azure-migrate-poc`, and a `created` timestamp. `created` changes on every plan, so each tagged resource ignores later changes to that one key. The nightly sweep deletes Azure groups tagged `lifetime=1d`. The AWS files do not set `lifetime`.
+Both groups get `lifetime=1d`, `owner=zeon`, `project=06-aws-to-azure-migrate-poc`, and a `created` timestamp. `created` changes on every plan, so each tagged resource ignores later changes to that one key. The nightly sweep deletes Azure groups tagged `lifetime=1d`. The AWS files don't set `lifetime`.
 
 <!-- ![tags.tf with lifetime 1d on the Azure groups](docs/images/step-08-azure-tags.png) -->
 
@@ -227,9 +227,9 @@ The appliance administrator password has no default. Put it in `azure/terraform.
 discovery_admin_password = "<your-password>"
 ```
 
-Use 12 to 123 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`. The installer script is still a portal download. It is not in the virtual machine file.
+Use 12 to 123 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`. The installer script is still a portal download. It isn't in the virtual machine file.
 
-The Recovery Services vault and the cache storage account are not in these files. The portal creates them when replication is enabled.
+The Recovery Services vault and the cache storage account aren't in these files. The portal creates them when replication is enabled.
 
 ```bash
 cd azure
@@ -240,9 +240,7 @@ terraform plan
 
 ### Step 10: Clean up when you're done
 
-The teardown script is not written. Both sides are applied. Tear them down the same day when the portal work is finished.
-
-When the build has been applied, tear it down the same day. The appliance is 8 vCPU with a 620 GiB cache disk. After cutover, `terraform destroy` in `azure/` will miss the virtual machine, the vault, and the cache storage, because the portal creates those. The planned cleanup is `az group delete` on `rg-migrate-src-zeon01` and `rg-migrate-tgt-zeon01`, after the group name is typed. In `aws/`, `terraform destroy` removes the network and the instances. The nightly sweep leaves AWS virtual networks in place, and these AWS resources are not tagged `lifetime=1d`.
+There's no teardown script yet. Tear both sides down the same day you apply them, as soon as the portal work is finished. The appliance is 8 vCPU with a 620 GiB cache disk, so it's not something to leave running overnight. After cutover, `terraform destroy` in `azure/` will miss the virtual machine, the vault, and the cache storage, because the portal creates those. The planned cleanup is `az group delete` on `rg-migrate-src-zeon01` and `rg-migrate-tgt-zeon01`, after the group name is typed. In `aws/`, `terraform destroy` removes the network and the instances. The nightly sweep leaves AWS virtual networks in place, and these AWS resources aren't tagged `lifetime=1d`.
 
 <!-- ![both resource groups gone after teardown](docs/images/step-10-teardown.png) -->
 
@@ -252,16 +250,16 @@ When the build has been applied, tear it down the same day. The appliance is 8 v
 
 ### Run this as yourself
 
-The names committed in this repository are this proof of concept. Leave the two `variables.tf` files. Put your owner word in the copies you run. The sequence is the same as the [naming standard](https://github.com/zsociety47/cloud-projects/blob/main/standards/NAMING-STANDARD.md): type, project or role, then **your** owner word (`rg-migrate-src-zeon01` becomes `rg-migrate-src-ada01`). The Azure Migrate appliance name is globally unique; `migapplzeon01` cannot stay.
+The names in this repository are the ones I used for my own proof of concept, so don't edit the two `variables.tf` files. Make your own copies and swap my short name (`zeon`) for yours. The names follow the [naming standard](https://github.com/zsociety47/cloud-projects/blob/main/standards/NAMING-STANDARD.md): type, project or role, then your short name (`rg-migrate-src-zeon01` becomes `rg-migrate-src-ada01`). The Azure Migrate appliance name has to be unique worldwide, so `migapplzeon01` can't stay.
 
 This repository has two Terraform roots. Copy an example in each folder.
 
 | Open this | Do this |
 |---|---|
-| [`aws/terraform.tfvars.example`](aws/terraform.tfvars.example) | Copy to `aws/terraform.tfvars` (gitignored). Replace every `yourname` with your owner word, including `tags.owner`. Do not copy the key pair name `key-migrate-zeon`. |
-| [`aws/variables.tf`](aws/variables.tf) | Read only. These defaults are this proof. |
-| [`azure/terraform.tfvars.example`](azure/terraform.tfvars.example) | Copy to `azure/terraform.tfvars` (gitignored). Replace every `yourname` with your owner word, including `tags.owner` and `discovery_appliance_name`. |
-| [`azure/variables.tf`](azure/variables.tf) | Read only. These defaults are this proof. |
+| [`aws/terraform.tfvars.example`](aws/terraform.tfvars.example) | Copy to `aws/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner`. Don't reuse my key pair name, `key-migrate-zeon`. |
+| [`aws/variables.tf`](aws/variables.tf) | Leave this one alone. Its defaults are the names from my own proof. |
+| [`azure/terraform.tfvars.example`](azure/terraform.tfvars.example) | Copy to `azure/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner` and `discovery_appliance_name`. |
+| [`azure/variables.tf`](azure/variables.tf) | Leave this one alone. Its defaults are the names from my own proof. |
 
 ```bash
 cp aws/terraform.tfvars.example aws/terraform.tfvars
@@ -309,7 +307,7 @@ terraform init
 terraform plan
 ```
 
-`init` ends with `Terraform has been successfully initialized!`. With the default switch, `plan` lists the network and the source server, and it does not print the discovery password. The replication appliance and the cache disk appear after `replication_instance_enabled` is set to true.
+`init` ends with `Terraform has been successfully initialized!`. With the default switch, `plan` lists the network and the source server, and it doesn't print the discovery password. The replication appliance and the cache disk appear after `replication_instance_enabled` is set to true.
 
 ### Initialize and plan Azure
 
@@ -319,11 +317,11 @@ terraform init
 terraform plan
 ```
 
-`plan` lists the two groups, the virtual network, the subnet, the firewall, `pip-appl-zeon`, `nic-appl-zeon`, and `vm-appl-zeon`. It does not print the administrator password. It may register `Microsoft.Network` and `Microsoft.Compute`. East US has 10 total regional virtual CPUs, and this virtual machine uses 8 of them.
+`plan` lists the two groups, the virtual network, the subnet, the firewall, `pip-appl-zeon`, `nic-appl-zeon`, and `vm-appl-zeon`. It doesn't print the administrator password. It may register `Microsoft.Network` and `Microsoft.Compute`. East US has 10 total regional virtual CPUs, and this virtual machine uses 8 of them.
 
 ### Apply
 
-Do not apply yet. An AWS apply with the default switch creates the network and the source, which fits the quota of 8. It does not create the replication appliance. Azure apply creates the discovery virtual machine, which bills by the hour. Those groups are tagged `lifetime=1d`, so the nightly sweep can delete them.
+Don't apply yet. An AWS apply with the default switch creates the network and the source, which fits the quota of 8. It doesn't create the replication appliance. Azure apply creates the discovery virtual machine, which bills by the hour. Those groups are tagged `lifetime=1d`, so the nightly sweep can delete them.
 
 ### Verify the AWS side
 
@@ -331,7 +329,7 @@ Do not apply yet. An AWS apply with the default switch creates the network and t
 ./scripts/verify-aws.sh
 ```
 
-The script reads the live virtual private cloud, the source server, and the source firewall. It prints a pass or fail line for each check and does not print public addresses. The replication appliance is allowed to be off. A running appliance passes only when it is `c5.2xlarge` with a 620 GiB cache disk. The checks in [Success criteria](#success-criteria) still cover discovery, replication, and cutover, which this script does not.
+The script reads the live virtual private cloud, the source server, and the source firewall. It prints a pass or fail line for each check and doesn't print public addresses. The replication appliance is allowed to be off. A running appliance passes only when it is `c5.2xlarge` with a 620 GiB cache disk. The checks in [Success criteria](#success-criteria) still cover discovery, replication, and cutover, which this script doesn't.
 
 ### Teardown
 
@@ -390,9 +388,25 @@ flowchart LR
 
 - The operator reaches Windows machines only on TCP 3389, and only from the address collected at plan time.
 - The source and the appliance share `10.0.1.0/24`. The appliance, when it exists, installs the Mobility service on the source over TCP 445, 135, and 5985.
-- `vm-appl-zeon` is running in the staging group, on `snet-migrate` in the target virtual network. The source firewall allows TCP 5985 from that appliance's address. The installer has not been run.
+- `vm-appl-zeon` was created in the staging group, on `snet-migrate`, and destroyed the same night. The next apply brings it back. The source firewall allows TCP 5985 from that appliance's address once `discovery_winrm_cidr` is set. The installer is a portal step.
 - The replication appliance is declared and switched off until the virtual CPU quota reaches 10.
-- The migrated server, the vault, and the cache storage account are created by Azure Migrate. Terraform does not declare them.
+- The migrated server, the vault, and the cache storage account are created by Azure Migrate. Terraform doesn't declare them.
+
+---
+
+## Variant B: appliance in Azure
+
+Variant A keeps the replication appliance on AWS, in the same virtual private cloud as the source. Variant B is a separate Terraform folder, `variant-b-appliance-in-azure`, with its own state. The AWS source stays in `aws/`. Only the replication appliance moves. It is a `Standard_D8as_v4` (8 virtual central processing units, 32 GB) in `rg-migrate-repl-zeon01`, on `10.7.0.0/16`.
+
+Do not run it beside `vm-appl-zeon`. Each machine is 8 virtual central processing units, and East US allows 10. Deallocate one before you start the other. The password is `TF_VAR_replication_admin_password` in the environment. It is not stored in a tfvars file.
+
+| | Variant A | Variant B |
+|---|---|---|
+| AWS capacity needed | 10 virtual central processing units: source 2 plus appliance 8. Quota `L-1216C47A` is 8 until the open request for 16 is approved. | 2 virtual central processing units: the source only. |
+| Internet exposure | Replication ports stay inside `10.0.1.0/24`. Remote Desktop is the operator address only. | Remote Desktop is the operator address only. TCP 443 and 9443 are allowed in, and TCP 5985, 445, and 135 out, only after the source address is set as a `/32`. Azure's default outbound allow remains, as it does on the discovery firewall. |
+| Ports | Source: 3389 from the operator; 445, 135, and 5985 from the subnet. Appliance: 3389 from the operator; 443 and 9443 from the subnet. | Appliance: 3389 from the operator. The source-address rules above are off until `source_replication_cidr` is set. The AWS source firewall is not changed. |
+| Cost per hour | About $0.84 on AWS while copying: source $0.06, `c5.2xlarge` $0.708, and 620 GiB gp3 at $0.08 per GB-month (about $0.07). Add $0.752 if the discovery machine stays on. Prices checked 2026-10-27. | About $0.92: source $0.06, the Azure virtual machine $0.752, and the cache disk at the 1024 GB Standard SSD tier ($76.80 per month, about $0.11). Discovery stays off. |
+| Closeness to Microsoft's AWS guidance | Matches it. The appliance sits in the source virtual private cloud, with a cache disk of at least 600 GB. | The comparison path. Whether replication works from Azure, and which way the agent push goes, are unverified. See `variant-b-appliance-in-azure/FINDINGS.md`. |
 
 ---
 
@@ -448,6 +462,12 @@ azure/
   public_ip.tf                    Standard static address pip-appl-zeon
   network_interface.tf            joins pip-appl-zeon to snet-migrate
   discovery_virtual_machine.tf    Windows Server 2022 appliance, Standard_D8as_v4
+variant-b-appliance-in-azure/
+  FINDINGS.md                     quota block, and the two unverified replication questions
+  versions.tf                     same Azure pins as azure/, separate state
+  replication_virtual_machine.tf  Windows Server 2022, Standard_D8as_v4
+  cache_disk.tf                   620 GB cache disk
+  network_security_group.tf       Remote Desktop from the operator
 docs/architecture/
   architecture.png                reference picture
   architecture.pdf                same picture, for print
@@ -457,9 +477,9 @@ docs/architecture/
 
 ## Security choices
 
-- **Remote Desktop is a /32.** The address is looked up at plan time. It is stored in state and is not written in the repository.
-- **Discovery uses a local account.** `migrateadmin` is created on first boot. The password lives in `aws/terraform.tfvars`. The built-in Administrator password is decrypted with the RSA key and is not given an output.
-- **No second AWS user.** The discovery appliance does not get an Identity and Access Management (IAM) access key. It reaches the source over WinRM.
+- **Remote Desktop is a /32.** The address is looked up at plan time. It's stored in state and isn't written in the repository.
+- **Discovery uses a local account.** `migrateadmin` is created on first boot. The password lives in `aws/terraform.tfvars`. The built-in Administrator password is decrypted with the RSA key and isn't given an output.
+- **No second AWS user.** The discovery appliance doesn't get an Identity and Access Management (IAM) access key. It reaches the source over WinRM.
 - **Replication ports stay inside the subnet.** TCP 443 and 9443 on the appliance, and TCP 445, 135, and 5985 on the source, allow `10.0.1.0/24` only.
 - **Disks are unencrypted on purpose.** EBS encryption by default was off. Turning it on would change the volume AWS presents to Azure Migrate, so both the source disk and the cache disk set `encrypted = false`.
 - **Outbound is two ports, on one address.** The subnet firewall allows TCP 443 to Azure and the public internet, and TCP 5985 to the public internet. `pip-appl-zeon` is the Standard static address that carries it. `nic-appl-zeon` joins that address to `snet-migrate`, and `vm-appl-zeon` attaches that interface.
@@ -471,7 +491,7 @@ Plan on about 10 to 15 US dollars if both clouds are destroyed the same day. The
 
 ## Going further
 
-- The appliance Login button signs in by a device code, which is a code you paste into a browser. Security defaults block that sign-in, and the page shows error 530035. A directory without a paid Microsoft Entra ID license cannot make an exception for that one sign-in. Turn security defaults off before Login: Microsoft Entra ID, Properties, Security defaults, Disabled, then Save. Leave them off until the replication appliance signs in the same way. Stay on the Login button. A separate application and certificate skips those screens, and it cannot register the replication appliance.
+- The appliance's Login button signs you in with a device code, which is a code you paste into a browser. Security defaults block that sign-in and the page shows error 530035. A directory without a paid Microsoft Entra ID license can't make an exception for just that one sign-in, so turn security defaults off before you click Login: Microsoft Entra ID, Properties, Security defaults, Disabled, then Save. Leave them off until the replication appliance signs in the same way. Stick with the Login button. A separate app and certificate would skip those screens, but it can't register the replication appliance.
 - Run `AzureMigrateInstaller.ps1` from the portal on `vm-appl-zeon`. The discovery address is already in `discovery_winrm_cidr`.
 - Request quota `L-1216C47A` at 10 if it is still 8, then set `replication_instance_enabled` to true, install `DRInstaller.ps1` from the portal onto `ec2-migrate-repl-zeon`, and enable replication. Leave a higher request alone if one is already open.
 - Confirm on the first replication whether TCP 443 and 9443 need to be allowed in both directions inside the subnet.
@@ -485,15 +505,15 @@ Plan on about 10 to 15 US dollars if both clouds are destroyed the same day. The
 
 *For engineers: what actually happened while building this, including the errors.*
 
-- **The Windows password needs an RSA key.** An ED25519 key cannot decrypt the Administrator password AWS returns. `ssh-keygen -t rsa -b 2048 -m PEM` writes the PEM header `-----BEGIN RSA PRIVATE KEY-----`, which `aws_instance` can use. `get_password_data = true` waits during apply until that password exists.
-- **A security group name cannot start with `sg-`.** AWS rejected that prefix. The firewalls are `migrate-src-sg-zeon` and `migrate-repl-sg-zeon`.
+- **The Windows password needs an RSA key.** An ED25519 key can't decrypt the Administrator password AWS returns. `ssh-keygen -t rsa -b 2048 -m PEM` writes the PEM header `-----BEGIN RSA PRIVATE KEY-----`, which `aws_instance` can use. `get_password_data = true` waits during apply until that password exists.
+- **A security group name can't start with `sg-`.** AWS rejected that prefix. The firewalls are `migrate-src-sg-zeon` and `migrate-repl-sg-zeon`.
 - **EBS encryption by default was false.** The source disk and the cache disk set `encrypted = false` so the volume matches the account default that was checked.
-- **The Standard vCPU quota blocks the replication appliance.** Quota `L-1216C47A`, Running On-Demand Standard (A, C, D, H, I, M, R, T, Z), had an applied value of 8 in `us-east-1`. The source is 2 vCPUs and the appliance is 8, and replication needs both running, so the applied value has to be at least 10. Request 10. A larger number is more likely to be reviewed by a person. This account already had a higher request open, and that request was left as filed. The source was applied with `replication_instance_enabled` false and later destroyed. The replication instance was not created.
-- **The replication appliance stays in the source VPC.** Azure Migrate runs a configuration server and a process server on that machine. The process server receives disk blocks from the Mobility service on the source over TCP 9443, compresses and encrypts them, holds them on the cache disk, and uploads them to Azure over HTTPS 443. Microsoft requires 8 cores, 16 GB of memory, a separate cache disk of at least 600 GB, and a machine in the same VPC as the source. A smaller size fails that check. Putting the appliance in Azure leaves it on the wrong side of the copy, and this proof does not do that.
+- **The Standard vCPU quota blocks the replication appliance.** Quota `L-1216C47A`, Running On-Demand Standard (A, C, D, H, I, M, R, T, Z), had an applied value of 8 in `us-east-1`. The source is 2 vCPUs and the appliance is 8, and replication needs both running, so the applied value has to be at least 10. Request 10. A larger number is more likely to be reviewed by a person. This account already had a higher request open, and that request was left as filed. The source was applied with `replication_instance_enabled` false and later destroyed. The replication instance wasn't created.
+- **The replication appliance stays in the source VPC.** Azure Migrate runs a configuration server and a process server on that machine. The process server receives disk blocks from the Mobility service on the source over TCP 9443, compresses and encrypts them, holds them on the cache disk, and uploads them to Azure over HTTPS 443. Microsoft requires 8 cores, 16 GB of memory, a separate cache disk of at least 600 GB, and a machine in the same VPC as the source. A smaller size fails that check. Putting the appliance in Azure leaves it on the wrong side of the copy, and this proof doesn't do that.
 - **The earlier plan is stale.** That plan reported `12 to add, 0 to change, 0 to destroy` before the Mobility ingress rules. Plan again before apply. The plan file was deleted because it contained the operator public address.
 - **PowerShell dollars in `templatefile`.** Terraform interpolates `${name}`. A PowerShell `$` in the guest script has to be written `$$`, or avoided. The scripts pass the computer name, the username, and the password in as Terraform variables.
 - **The cache disk is a separate resource.** Putting it in `ebs_block_device` would replace the instance when the disk changes. `aws_ebs_volume` plus `aws_volume_attachment` keeps the instance stable.
 - **The NSG attaches in its own file.** This provider has no `network_security_group_id` argument on the subnet. `azurerm_subnet_network_security_group_association` is the attachment.
 - **`created` would change every plan.** `timestamp()` is a new value each run. `lifecycle { ignore_changes = [tags["created"]] }` keeps the first value.
 - **The configuration server is retired.** Microsoft retired the classic configuration server on 2026-09-30. This build uses the simplified replication appliance, still installed later with `DRInstaller.ps1`.
-- **Security defaults block the appliance Login.** Error 530035 means the sign-in was blocked by security defaults. The Login button uses a device code against Microsoft Azure PowerShell. This directory has no premium license, so conditional access cannot allow that one flow. A preconfigured application and certificate would also skip Login. That path is not used here. A reader would not be looking at the same screens, and Microsoft does not support it for the replication appliance.
+- **Security defaults block the appliance Login.** Error 530035 means the sign-in was blocked by security defaults. The Login button uses a device code against Microsoft Azure PowerShell. This directory has no premium license, so conditional access can't allow that one flow. A preconfigured application and certificate would also skip Login. That path isn't used here. Anyone following along wouldn't see the same screens, and Microsoft doesn't support it for the replication appliance.

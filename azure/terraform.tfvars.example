@@ -1,6 +1,6 @@
-# Copy to terraform.tfvars in this folder (gitignored).
-# Change every name that includes zeon, and the owner tag.
-# Do not put the appliance password here.
+# Copy this to terraform.tfvars in this folder (it's gitignored).
+# Replace yourname in every name with your short name, and set the owner tag to your name too.
+# Don't put the appliance password here.
 
 staging_resource_group_name      = "rg-migrate-src-yourname01"
 target_resource_group_name       = "rg-migrate-tgt-yourname01"

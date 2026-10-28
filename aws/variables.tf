@@ -127,7 +127,7 @@ variable "source_volume_size_gb" {
 }
 
 variable "replication_instance_enabled" {
-  description = "Create the replication appliance and its cache disk. Leave this false until the Running On-Demand Standard quota L-1216C47A in us-east-1 is at least 10. The source is 2 vCPUs and this appliance is 8, and both must be running. Request 10. A larger request is more likely to wait on a person. If a higher request is already open, leave it. Discovery does not use this appliance."
+  description = "Create the replication appliance and its cache disk. Leave this false until the Running On-Demand Standard quota L-1216C47A in us-east-1 is at least 10. The source is 2 vCPUs and this appliance is 8, and both must be running. Request 10. A bigger request is more likely to sit waiting for a person to approve it. If a higher request is already open, leave it. Discovery does not use this appliance."
   type        = bool
   default     = false
 }
