@@ -26,7 +26,9 @@ netsh advfirewall firewall set rule group="Windows Management Instrumentation (W
 
 New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "LocalAccountTokenFilterPolicy" -Value 1 -PropertyType DWord -Force
 
-net user "${discovery_username}" "${discovery_password}" /add
+# /Y answers the confirmation when the password is longer than 14 characters.
+# Without it, first boot stops at a Y/N prompt and migrateadmin never gets created.
+net user "${discovery_username}" "${discovery_password}" /add /Y
 net localgroup Administrators "${discovery_username}" /add
 
 Rename-Computer -NewName "${computer_name}" -Force -Restart
