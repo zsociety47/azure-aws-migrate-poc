@@ -1,15 +1,26 @@
-# Copy this to terraform.tfvars in this folder (it's gitignored).
-# Replace yourname in every name with your short name, and set the owner tag to your name too.
+# This file is committed. terraform.tfvars is not.
+# Create your local file (it does not appear until you copy):
+#   cp terraform.tfvars.example terraform.tfvars
+# Then edit terraform.tfvars: replace every yourname, set discovery_password,
+# and leave discovery_winrm_cidr empty until the Azure discovery public address exists.
 
-vpc_name                       = "vpc-migrate-yourname"
-subnet_name                    = "snet-migrate-yourname"
-internet_gateway_name          = "igw-migrate-yourname"
-route_table_name               = "rt-migrate-yourname"
-source_security_group_name     = "migrate-src-sg-yourname"
+vpc_name                        = "vpc-migrate-yourname"
+subnet_name                     = "snet-migrate-yourname"
+internet_gateway_name           = "igw-migrate-yourname"
+route_table_name                = "rt-migrate-yourname"
+source_security_group_name      = "migrate-src-sg-yourname"
 replication_security_group_name = "migrate-repl-sg-yourname"
-key_pair_name                  = "key-migrate-yourname"
-source_instance_name           = "ec2-migrate-src-yourname"
-source_computer_name           = "src-yourname"
+key_pair_name                   = "key-migrate-yourname"
+source_instance_name            = "ec2-migrate-src-yourname"
+source_computer_name            = "src-yourname"
+
+# Required. At least 12 characters, with uppercase, lowercase, a number, and a
+# symbol. No double quote, dollar sign, or backtick, and do not include migrateadmin.
+discovery_password = "REPLACE_ME"
+
+# Leave empty for the first AWS apply. After Azure creates pip-appl-*, set this
+# to that public address with a /32 (example shape only: "203.0.113.10/32").
+discovery_winrm_cidr = ""
 
 tags = {
   project     = "azure-aws-migrate-poc"

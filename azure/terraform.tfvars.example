@@ -1,6 +1,7 @@
-# Copy this to terraform.tfvars in this folder (it's gitignored).
-# Replace yourname in every name with your short name, and set the owner tag to your name too.
-# Don't put the appliance password here.
+# This file is committed. terraform.tfvars is not.
+# Create your local file (it does not appear until you copy):
+#   cp terraform.tfvars.example terraform.tfvars
+# Then edit terraform.tfvars: replace every yourname and set discovery_admin_password.
 
 staging_resource_group_name      = "rg-migrate-src-yourname01"
 target_resource_group_name       = "rg-migrate-tgt-yourname01"
@@ -12,6 +13,9 @@ discovery_appliance_name         = "migapplyourname01"
 discovery_computer_name          = "appl-yourname"
 discovery_public_ip_name         = "pip-appl-yourname"
 discovery_network_interface_name = "nic-appl-yourname"
+
+# Required for vm-appl-*. Same character rules as the AWS discovery_password.
+discovery_admin_password = "REPLACE_ME"
 
 tags = {
   project     = "06-aws-to-azure-migrate-poc"

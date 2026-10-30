@@ -37,13 +37,7 @@ export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
 
 `ARM` is the prefix the Azure Resource Manager provider uses for its environment variables. Read each plan before you type `yes`.
 
-The discovery password has no default. Put it in `aws/terraform.tfvars`. That file is gitignored.
-
-```hcl
-discovery_password = "<your-password>"
-```
-
-Use at least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`.
+The discovery password has no default. It lives in `aws/terraform.tfvars`, which is gitignored and does not exist until you copy the example (see **Run this as yourself** below). Replace `REPLACE_ME` with your password. Use at least 12 characters, with an uppercase letter, a lowercase letter, a number, and a symbol. Leave out double quotes, dollar signs, backticks, and the username `migrateadmin`.
 
 Check the Running On-Demand Standard virtual CPU (vCPU) quota before you create the replication appliance. In `us-east-1` the quota code is `L-1216C47A`. A new account often has an applied value of 8. The source server is a `t3.medium`, which is 2 vCPUs. The replication appliance is a `c5.2xlarge`, which is 8 vCPUs, because Azure Migrate requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB on a machine in the same virtual private cloud (VPC) as the source. Both have to be running at the same time, so the applied quota has to be at least 10. A stopped instance doesn't count, and replication needs both of them up.
 
@@ -135,7 +129,7 @@ On the source server:
 | TCP 445, 135, and 5985 | `10.0.1.0/24` | the replication appliance installs the Mobility service |
 | all outbound | `0.0.0.0/0` | the server starts its own connections, including replication |
 
-Set `discovery_winrm_cidr` in `aws/terraform.tfvars` to the public address of `pip-appl-zeon` with a `/32` prefix after that address exists. That adds TCP 5985 from the discovery appliance only. Leave the variable empty until then. The address isn't written in the repository.
+After Azure apply creates `pip-appl-zeon`, edit the same `aws/terraform.tfvars` you copied earlier and set `discovery_winrm_cidr` to that public address with a `/32` prefix. That adds TCP 5985 from the discovery appliance only. Leave the variable empty until then. The address isn't written in the repository.
 
 On the replication appliance:
 
@@ -252,13 +246,13 @@ There's no teardown script yet. Tear both sides down the same day you apply them
 
 The names in this repository are the ones I used for my own proof of concept, so don't edit the two `variables.tf` files. Make your own copies and swap my short name (`zeon`) for yours. The names follow the [naming standard](https://github.com/zsociety47/cloud-projects/blob/main/standards/NAMING-STANDARD.md): type, project or role, then your short name (`rg-migrate-src-zeon01` becomes `rg-migrate-src-ada01`). The Azure Migrate appliance name has to be unique worldwide, so `migapplzeon01` can't stay.
 
-This repository has two Terraform roots. Copy an example in each folder.
+This repository has two Terraform roots. `terraform.tfvars` is gitignored in both, so it never appears from a clone. You create each file by copying the committed example, then you edit that copy.
 
 | Open this | Do this |
 |---|---|
-| [`aws/terraform.tfvars.example`](aws/terraform.tfvars.example) | Copy to `aws/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner`. Don't reuse my key pair name, `key-migrate-zeon`. |
+| [`aws/terraform.tfvars.example`](aws/terraform.tfvars.example) | Copy to `aws/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner`. Set `discovery_password`. Leave `discovery_winrm_cidr` as `""` until the Azure discovery public address exists. Don't reuse my key pair name, `key-migrate-zeon`. |
 | [`aws/variables.tf`](aws/variables.tf) | Leave this one alone. Its defaults are the names from my own proof. |
-| [`azure/terraform.tfvars.example`](azure/terraform.tfvars.example) | Copy to `azure/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner` and `discovery_appliance_name`. |
+| [`azure/terraform.tfvars.example`](azure/terraform.tfvars.example) | Copy to `azure/terraform.tfvars` (gitignored). Replace every `yourname` with your short name, including `tags.owner` and `discovery_appliance_name`. Set `discovery_admin_password`. |
 | [`azure/variables.tf`](azure/variables.tf) | Leave this one alone. Its defaults are the names from my own proof. |
 
 ```bash
@@ -266,7 +260,13 @@ cp aws/terraform.tfvars.example aws/terraform.tfvars
 cp azure/terraform.tfvars.example azure/terraform.tfvars
 ```
 
-Run the AWS root and the Azure root separately. Each one keeps its own local state file.
+After the copy, open each `terraform.tfvars` and replace `REPLACE_ME` with a real password. Confirm both files are ignored:
+
+```bash
+git check-ignore -v aws/terraform.tfvars azure/terraform.tfvars
+```
+
+Each line should name `.gitignore`. Run the AWS root and the Azure root separately. Each one keeps its own local state file.
 
 ### Sign in
 
@@ -287,17 +287,13 @@ ssh-keygen -t rsa -b 2048 -m PEM -N "" -f keys/id_rsa
 
 The file `keys/id_rsa` begins with `-----BEGIN RSA PRIVATE KEY-----`. Leave it uncommitted.
 
-### Set the discovery password
+### Fill the passwords in the tfvars you already copied
 
-Create `aws/terraform.tfvars` with `discovery_password = "<your-password>"`. Confirm the file is ignored:
+If you skipped **Run this as yourself**, go back and run the two `cp` commands. The password lines are already in those files as `REPLACE_ME`.
 
-```bash
-git check-ignore -v aws/terraform.tfvars
-```
+In `aws/terraform.tfvars`, set `discovery_password` (local account `migrateadmin` on the AWS source). Leave `discovery_winrm_cidr` empty until after Azure apply.
 
-The line should name `.gitignore`.
-
-Create `azure/terraform.tfvars` with `discovery_admin_password = "<your-password>"`. The same ignore rule covers it. This password is for `vm-appl-zeon`. It can differ from the source password.
+In `azure/terraform.tfvars`, set `discovery_admin_password` (administrator on `vm-appl-zeon`). It can differ from the source password.
 
 ### Initialize and plan AWS
 
