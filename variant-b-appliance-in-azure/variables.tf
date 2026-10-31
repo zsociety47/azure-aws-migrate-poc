@@ -50,9 +50,9 @@ variable "replication_virtual_machine_name" {
 }
 
 variable "replication_virtual_machine_size" {
-  description = "Size of the replication appliance. Standard_D8as_v4 is 8 virtual CPUs and 32 GB, which meets the 8-core floor, and this subscription has already run that size in East US."
+  description = "Size of the replication appliance. Standard_D8ds_v4 is 8 virtual CPUs and 32 GB (Intel) with a temporary disk. Standard_D8as_v4 has a temporary disk, so a resize cannot drop it. East US had no capacity for Standard_D8s_v3. Standard_D8s_v4 was refused because it has no temporary disk. Standard_D8as_v4 reports 4 guest cores and Azure Site Recovery refuses it."
   type        = string
-  default     = "Standard_D8as_v4"
+  default     = "Standard_D8ds_v4"
 }
 
 variable "replication_computer_name" {
@@ -128,6 +128,18 @@ variable "source_replication_cidr" {
     condition     = var.source_replication_cidr == "" || can(cidrhost(var.source_replication_cidr, 0))
     error_message = "Use the source public address with a /32 prefix, or leave it empty."
   }
+}
+
+variable "discovery_resource_group_name" {
+  description = "Staging resource group from azure/ that holds the discovery virtual machine. Variant B deallocates that machine before creating vm-repl so both Standard_D8as_v4 appliances are not allocated at once."
+  type        = string
+  default     = "rg-migrate-src-zeon01"
+}
+
+variable "discovery_virtual_machine_name" {
+  description = "Discovery virtual machine name from azure/. Apply in this folder runs az vm deallocate on it first. That is not terraform destroy: disks and the Migrate project stay."
+  type        = string
+  default     = "vm-appl-zeon"
 }
 
 variable "tags" {

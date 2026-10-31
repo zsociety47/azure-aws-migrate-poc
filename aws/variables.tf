@@ -114,6 +114,17 @@ variable "discovery_winrm_cidr" {
   }
 }
 
+variable "variant_b_mobility_cidr" {
+  description = "Public address of the Variant B replication appliance (pip-repl), with a /32 prefix. Leave empty until that address exists. Opens TCP 445, 135, and 5985 from that appliance so Mobility can install when the replication machine is in Azure instead of in the source subnet."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.variant_b_mobility_cidr == "" || can(cidrhost(var.variant_b_mobility_cidr, 0))
+    error_message = "Use the Variant B appliance public address with a /32 prefix, or leave it empty."
+  }
+}
+
 variable "source_instance_type" {
   description = "EC2 instance type for the source server. t3.medium is 2 vCPU and 4 GB."
   type        = string

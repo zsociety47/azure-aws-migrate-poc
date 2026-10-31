@@ -16,11 +16,16 @@ source_computer_name            = "src-yourname"
 
 # Required. At least 12 characters, with uppercase, lowercase, a number, and a
 # symbol. No double quote, dollar sign, or backtick, and do not include migrateadmin.
+# Generate one: ../scripts/gen-password.sh --length 16 --username migrateadmin
 discovery_password = "REPLACE_ME"
 
 # Leave empty for the first AWS apply. After Azure creates pip-appl-*, set this
 # to that public address with a /32 (example shape only: "203.0.113.10/32").
 discovery_winrm_cidr = ""
+
+# Leave empty until Variant B's pip-repl exists. Then set that public address
+# with a /32 so Mobility can reach the source from Azure (README step 19).
+variant_b_mobility_cidr = ""
 
 tags = {
   project     = "azure-aws-migrate-poc"

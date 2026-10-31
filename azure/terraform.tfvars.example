@@ -15,6 +15,7 @@ discovery_public_ip_name         = "pip-appl-yourname"
 discovery_network_interface_name = "nic-appl-yourname"
 
 # Required for vm-appl-*. Same character rules as the AWS discovery_password.
+# Generate one: ../scripts/gen-password.sh --length 16 --username migrateadmin
 discovery_admin_password = "REPLACE_ME"
 
 tags = {

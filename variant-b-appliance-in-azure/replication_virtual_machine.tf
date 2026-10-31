@@ -2,7 +2,7 @@
 # Referencing the network interface makes Terraform wait until the
 # public address and the subnet exist.
 #
-# Standard_D8as_v4 is 8 virtual CPUs and 32 GB. The Windows image
+# Standard_D8ds_v4 is 8 virtual CPUs and 32 GB. The Windows image
 # requires a 127 GB operating-system disk. The installer script is
 # downloaded from Azure Migrate later. It is not in this file.
 #
@@ -34,6 +34,8 @@ resource "azurerm_windows_virtual_machine" "replication" {
   }
 
   tags = local.tags
+
+  depends_on = [terraform_data.deallocate_discovery]
 
   lifecycle {
     ignore_changes = [tags["created"]]

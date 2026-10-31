@@ -8,6 +8,8 @@
 # so ports 445, 135, and 5985 are open to the subnet. Windows Remote
 # Management from the discovery appliance is a separate rule, and only
 # when discovery_winrm_cidr is set to that appliance's public /32.
+# Variant B puts the replication appliance in Azure, so Mobility also
+# needs 445, 135, and 5985 from pip-repl when variant_b_mobility_cidr is set.
 #
 # The egress rule lets the server start connections. Replication sends
 # disk changes to the appliance, and Windows uses outbound internet for
@@ -55,6 +57,39 @@ resource "aws_security_group" "source" {
     for_each = var.discovery_winrm_cidr == "" ? [] : [var.discovery_winrm_cidr]
     content {
       description = "Windows Remote Management from the discovery appliance"
+      from_port   = 5985
+      to_port     = 5985
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.variant_b_mobility_cidr == "" ? [] : [var.variant_b_mobility_cidr]
+    content {
+      description = "Mobility file copy from the Variant B replication appliance"
+      from_port   = 445
+      to_port     = 445
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.variant_b_mobility_cidr == "" ? [] : [var.variant_b_mobility_cidr]
+    content {
+      description = "Mobility remote procedure call from the Variant B replication appliance"
+      from_port   = 135
+      to_port     = 135
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.variant_b_mobility_cidr == "" ? [] : [var.variant_b_mobility_cidr]
+    content {
+      description = "Windows Remote Management from the Variant B replication appliance"
       from_port   = 5985
       to_port     = 5985
       protocol    = "tcp"
