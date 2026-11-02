@@ -11,7 +11,7 @@ The walkthrough isn't recorded yet.
 - **What it is:** a Windows Server on Amazon Web Services (AWS) that Azure Migrate will discover, replicate, and cut over into an Azure virtual network.
 - **What's automated:** Terraform declares the AWS network, the source server, the replication appliance, the Azure network, and the discovery virtual machine. The replication appliance stays out of the first apply while the Standard virtual CPU quota is below 10. The Migrate project, the appliance installer, and the cutover are still portal steps.
 - **Why it's secure:** Remote Desktop is limited to the operator's current public address. Discovery uses a local Windows account over Windows Remote Management (WinRM). No AWS access key is stored for discovery.
-- **Result so far:** discovery completed (WinRM validate, inventory shows `src-zeon`). Replication is **Protected** / **Healthy** on Variant A (`ec2-migrate-repl-zeon` / `replapplzeon01`). Test migration booted `src-zeon-test` as `Standard_D2s_v4` in `vnet-migrate-zeon` / `snet-migrate`. Cutover left `src-zeon` **Running** as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` (2026-11-01). Variant B (`vm-repl`) failed Azure Site Recovery's core check (`NumberOfCores=4` on `Standard_D8ds_v4`).
+- **Result so far:** discovery completed (WinRM validate, inventory shows `src-zeon`). Replication was **Protected** / **Healthy** on Variant A (`ec2-migrate-repl-zeon` / `replapplzeon01`) on 2026-11-01 (last synchronized 3:15:56 PM) before the test migration and cutover. Test migration booted `src-zeon-test` as `Standard_D2s_v4` in `vnet-migrate-zeon` / `snet-migrate`. Cutover left `src-zeon` **Running** as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` (2026-11-01). The portal item is now in a post-cutover commit-pending state; the migration has not been marked complete. Variant B (`vm-repl`) failed Azure Site Recovery's core check (`NumberOfCores=4` on `Standard_D8ds_v4`).
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
@@ -600,7 +600,7 @@ flowchart LR
     discovery -- "WinRM 5985" --> source
     discovery -. "inventory · portal" .-> migrate
     repl -- "Mobility install 445 · 135 · 5985" --> source
-    repl -. "disk copy over HTTPS 443 · Protected, Healthy" .-> vault
+    repl -. "disk copy over HTTPS 443 · Protected, Healthy until cutover" .-> vault
     migrate -. "cutover · done" .-> landed
     vnet -. "lands in" .-> landed
 
@@ -686,7 +686,7 @@ A Windows server on AWS can be moved into Azure as a physical server: Azure disc
 | 1 | The AWS plan lists the network and the source while the appliance switch is off, and lists the appliance and the 620 GiB cache disk when the switch is on | `terraform plan` in `aws/` | Not checked |
 | 2 | Remote Desktop on both clouds accepts only the operator `/32` | security group and NSG rules, then a connection from that address | Not checked |
 | 3 | Discovery finds `src-zeon` over WinRM with `migrateadmin` | Azure Migrate inventory, with no AWS access key in the repo | Passed 2026-10-30: inventory shows `src-zeon` (step 16) |
-| 4 | Replication copies disk changes through the replication appliance (Variant A: `ec2-migrate-repl-zeon`; Variant B: `vm-repl`) | Azure Migrate replication health | Passed 2026-11-01: `src-zeon` Status **Protected**, Health **Healthy** (step 20). Variant A `ec2-migrate-repl-zeon` / `replapplzeon01`. |
+| 4 | Replication copies disk changes through the replication appliance (Variant A: `ec2-migrate-repl-zeon`; Variant B: `vm-repl`) | Azure Migrate replication health | Passed 2026-11-01: `src-zeon` was Status **Protected**, Health **Healthy** (step 20, last synchronized 3:15:56 PM) before the test migration and cutover. Variant A `ec2-migrate-repl-zeon` / `replapplzeon01`. The portal item is now post-cutover commit-pending; the migration has not been marked complete. |
 | 5 | A test migration boots in `vnet-migrate-zeon` | the test virtual machine on `snet-migrate` | Passed 2026-11-01: `src-zeon-test` **Running**, size `Standard_D2s_v4`, subnet `vnet-migrate-zeon` / `snet-migrate` (step 21). Test virtual machine cleaned up after the shot. |
 | 6 | Cutover leaves the server in `rg-migrate-tgt-zeon01` | the resource group after cutover | Passed 2026-11-01: `src-zeon` **Running**, size `Standard_D2s_v4`, subnet `vnet-migrate-zeon` / `snet-migrate` (step 22). Not the test leftover (`src-zeon-test` was deleted). |
 | 7 | Teardown removes the AWS instances and the Azure groups (including `rg-migrate-repl-zeon01` when Variant B was used) | `terraform destroy` in each root that was applied, then `az group delete` for leftovers | Not checked |
