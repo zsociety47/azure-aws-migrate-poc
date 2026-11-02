@@ -12,20 +12,16 @@
 # get_password_data waits for the built-in Administrator password, the
 # same way the source server does. Remote Desktop uses that password.
 #
-# The appliance is 8 virtual CPUs and the source is 2. Both have to be
-# running, so the Running On-Demand Standard quota L-1216C47A in
-# us-east-1 has to be at least 10. A new account is often still at 8.
-# Request 10 before setting replication_instance_enabled to true. A
-# larger jump is more likely to wait on a person. If a higher request
-# is already open, leave it. count leaves the appliance and the cache
-# disk out until that variable is true.
+# The appliance must report NumberOfCores >= 8. c5.2xlarge is 8 vCPUs
+# and 4 cores; Azure Site Recovery failed that check on 2026-10-31.
+# c5.4xlarge with hyperthreading off is 8 cores and 8 vCPUs. Count 8
+# against quota L-1216C47A together with the source (2). A default
+# c5.4xlarge is 16 vCPUs and does not fit. count leaves the appliance
+# and the cache disk out until replication_instance_enabled is true.
 #
 # This machine stays in the source virtual private cloud. Azure Migrate
 # requires 8 cores, 16 GB of memory, and a cache disk of at least 600 GB
-# here, beside the source. The process server on this instance receives
-# disk blocks on TCP 9443, compresses them, and uploads them to Azure.
-# A smaller instance fails that check. An appliance in Azure is on the
-# wrong side of the copy.
+# here, beside the source.
 
 resource "aws_instance" "replication" {
   count                  = var.replication_instance_enabled ? 1 : 0
@@ -35,6 +31,11 @@ resource "aws_instance" "replication" {
   vpc_security_group_ids = [aws_security_group.replication.id]
   key_name               = aws_key_pair.migrate.key_name
   get_password_data      = true
+
+  cpu_options {
+    core_count       = 8
+    threads_per_core = 1
+  }
 
   root_block_device {
     volume_type = "gp3"

@@ -6,9 +6,9 @@ Reading quotas and choosing a path is part of the work. A larger subscription mi
 
 ## 1. The quota blocks variant A
 
-Running On-Demand Standard quota `L-1216C47A` in `us-east-1` has an applied value of 8. Rechecked 2026-10-30. The source is a `t3.medium` (2 virtual central processing units). The replication appliance in variant A is a `c5.2xlarge` (8). Both have to run, so variant A needs 10. A request for 16 is open, case `179296523000916`, status `CASE_OPENED`. Do not file a second request and do not lower that one.
+Running On-Demand Standard quota `L-1216C47A` in `us-east-1` had an applied value of 8 while this proof was applied. Rechecked 2026-10-31: the applied value is **16** and the request for 16 is `CASE_CLOSED` (case `179296523000916`). AWS first emailed that they could not process it because a billing-related restriction was in place. After the payment method was updated, the applied value became 16. Do not file another request.
 
-Variant B keeps the source and moves the replication appliance to Azure, so the AWS side stays at 2 virtual central processing units. That is the path this folder supports while the AWS request waits.
+The source is a `t3.medium` (2 virtual central processing units). The replication appliance in variant A is a `c5.2xlarge` (8). Both have to run, so variant A needs 10. This rebuild stayed on Variant B because the applied value was still 8 at apply time. Variant A is now possible on a later pass. This pass did not create `ec2-migrate-repl-zeon`.
 
 ## 2. East US family quota still forces one Azure appliance at a time
 
@@ -33,10 +33,14 @@ Memory and CPU validation failed.
 The server has only 4 CPU cores. We recommend 8 cores for best performance.
 ```
 
-The virtual machine was `Standard_D8as_v4` (8 virtual CPUs, 32 GB). Azure reports that size. The guest still reports 4 cores because this AMD size exposes simultaneous multithreading that way. The configuration manager counts cores, not Azure virtual CPUs. Retry does not clear it. `Standard_D8s_v3` returned `SkuNotAvailable` in East US. `Standard_D8s_v4` was refused: you cannot drop a temporary disk on resize. Resized 2026-10-30 to Intel `Standard_D8ds_v4` (temporary disk kept; Standard DDSv4 family limit 10, usage was 0). Regional cores stay 8 of 20. Deallocate first, then resize. After start, open `https://localhost:44368` and select Retry.
+The virtual machine was `Standard_D8as_v4` (8 virtual CPUs, 32 GB). Azure reports that size. The guest still reports 4 cores because this AMD size exposes simultaneous multithreading that way. The configuration manager counts cores, not Azure virtual CPUs. Retry does not clear it. `Standard_D8s_v3` returned `SkuNotAvailable` in East US. `Standard_D8s_v4` was refused: you cannot drop a temporary disk on resize. Resized 2026-10-30 to Intel `Standard_D8ds_v4` (temporary disk kept; Standard DDSv4 family limit 10, usage was 0). Regional cores stay 8 of 20. Rechecked 2026-10-31 after start: guest `NumberOfCores=4`, `NumberOfLogicalProcessors=8`. Retry printed the same 4-core stop. A portal request to raise DDSv4 family to 16 returned Unsuccessful. 1-vCPU-per-core sizes with a temp disk sit in families whose East US limit is 0. Do not treat installer success as replication health.
 
 ## 5. UNVERIFIED until the first replication attempt
 
 (a) Replication works with this appliance in Azure for an AWS source. Microsoft's AWS guidance puts the replication appliance in the source virtual private cloud. This folder does the other placement so it can be compared. Do not state that the copy succeeds.
 
 (b) Which direction the Windows Remote Management (WinRM) agent push goes with this layout. The firewall can allow TCP 443 and 9443 in from the source address, and TCP 5985, 445, and 135 out to that same address. Those rules are added only after `source_replication_cidr` is set. They are not proof of which way the push travels. The AWS source firewall is unchanged: it still allows TCP 445, 135, and 5985 only from `10.0.1.0/24`.
+
+## 6. AWS `c5.2xlarge` fails the same 4-core check (2026-10-31)
+
+Exact stop on `ec2-migrate-repl-zeon` at `https://localhost:44368`: `The server has only 4 CPU cores. We recommend 8 cores for best performance.` Internet and time sync passed. Shot: `docs/images/step-20-variant-a-core-check-failed.png`. Do not Retry. `c5.2xlarge` is 8 virtual CPUs and 4 cores with hyperthreading. Azure Site Recovery counts `NumberOfCores`, not vCPUs. Quota `L-1216C47A` is 16 (source 2 plus this appliance 8). A `c5.4xlarge` with hyperthreading off (`core_count = 8`, `threads_per_core = 1`) is 8 cores and 8 vCPUs, which still fits. A default `c5.4xlarge` (16 vCPUs) does not: 2 + 16 = 18. The Azure `D16ds_v4` fallback still needs DDSv4 family 16 and the deallocated `vm-repl` count to drop.

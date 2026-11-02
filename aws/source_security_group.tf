@@ -53,6 +53,18 @@ resource "aws_security_group" "source" {
     cidr_blocks = [var.subnet_cidr]
   }
 
+  # WMI remote execution maps a dynamic port after TCP 135. Mobility
+  # push failed with error 322001 while 135, 445, and 5985 already
+  # succeeded from the appliance. Windows uses 49152-65535 for that
+  # second connection.
+  ingress {
+    description = "WMI dynamic RPC from the replication appliance"
+    from_port   = 49152
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
   dynamic "ingress" {
     for_each = var.discovery_winrm_cidr == "" ? [] : [var.discovery_winrm_cidr]
     content {

@@ -12,6 +12,8 @@ crash.*.log
 
 # A saved plan can contain the same sensitive values as the state.
 *.tfplan
+tfplan.*
+*.tfplan.*
 
 # Variable files are where the appliance password would land. The example
 # file is named terraform.tfvars.example, so this pattern does not hide it.

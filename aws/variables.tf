@@ -156,9 +156,9 @@ variable "replication_computer_name" {
 }
 
 variable "replication_instance_type" {
-  description = "EC2 instance type for the replication appliance. c5.2xlarge is 8 vCPU and 16 GB, which is Microsoft's minimum for the replication appliance. A smaller type fails that check. Count it against quota L-1216C47A together with the source."
+  description = "EC2 instance type for the replication appliance. Azure Site Recovery counts Windows NumberOfCores, not vCPUs. c5.2xlarge is 4 cores with hyperthreading and fails that check. c5.4xlarge with threads_per_core = 1 is 8 cores and 8 vCPUs, which fits quota L-1216C47A next to the 2-vCPU source. A default c5.4xlarge (16 vCPUs) does not fit. Confirm NumberOfCores is at least 8 before running DRInstaller.ps1."
   type        = string
-  default     = "c5.2xlarge"
+  default     = "c5.4xlarge"
 }
 
 variable "replication_os_volume_size_gb" {

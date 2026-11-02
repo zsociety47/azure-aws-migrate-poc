@@ -58,6 +58,43 @@ resource "aws_security_group" "replication" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # The appliance starts Windows Remote Management and the Mobility
+  # install toward the source. Without these, Test-NetConnection to
+  # TCP 5985 times out even when the source listener is up. Limited to
+  # the source subnet; the source firewall already allows the same ports
+  # inbound from that range.
+  egress {
+    description = "Windows Remote Management to the source subnet"
+    from_port   = 5985
+    to_port     = 5985
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  egress {
+    description = "Mobility file copy to the source subnet"
+    from_port   = 445
+    to_port     = 445
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  egress {
+    description = "Mobility remote procedure call to the source subnet"
+    from_port   = 135
+    to_port     = 135
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
+  egress {
+    description = "WMI dynamic RPC to the source subnet"
+    from_port   = 49152
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidr]
+  }
+
   tags = merge(var.tags, {
     Name = var.replication_security_group_name
   })
