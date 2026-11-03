@@ -6,8 +6,10 @@
 # It does not print public addresses, account ids, or passwords.
 #
 # The replication appliance is allowed to be absent. Quota L-1216C47A is
-# often 8, and the source plus that appliance need 10. A running appliance
-# passes only when it is c5.2xlarge and its cache disk is 620 GiB.
+# often 8 at first apply. c5.2xlarge failed Azure Site Recovery's core
+# check (4 cores). A running appliance passes only when it is c5.4xlarge
+# with a 620 GiB cache disk. AWS counts that type as 16 vCPUs, so source
+# plus appliance need about 18 while both are running.
 
 set -u
 set -o pipefail
@@ -24,7 +26,7 @@ key_name="key-migrate-zeon"
 source_name="ec2-migrate-src-zeon"
 source_type="t3.medium"
 replication_name="ec2-migrate-repl-zeon"
-replication_type="c5.2xlarge"
+replication_type="c5.4xlarge"
 cache_name="vol-migrate-repl-zeon"
 cache_size="620"
 
@@ -152,7 +154,7 @@ quota_value="$(aws service-quotas get-service-quota --region "$region" \
   --service-code ec2 --quota-code L-1216C47A \
   --query 'Quota.Value' --output text 2>/dev/null || true)"
 if [[ -n "$quota_value" && "$quota_value" != "None" ]]; then
-  pass 10 "Standard quota L-1216C47A applied value is ${quota_value} (replication needs 10)"
+  pass 10 "Standard quota L-1216C47A applied value is ${quota_value} (source plus c5.4xlarge needs about 18)"
 else
   fail 10 "Standard quota L-1216C47A can be read"
 fi

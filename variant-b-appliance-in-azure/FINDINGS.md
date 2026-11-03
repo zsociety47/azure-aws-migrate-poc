@@ -8,7 +8,7 @@ Reading quotas and choosing a path is part of the work. A larger subscription mi
 
 Running On-Demand Standard quota `L-1216C47A` in `us-east-1` had an applied value of 8 while this proof was applied. Rechecked 2026-10-31: the applied value is **16** and the request for 16 is `CASE_CLOSED` (case `179296523000916`). AWS first emailed that they could not process it because a billing-related restriction was in place. After the payment method was updated, the applied value became 16. Do not file another request.
 
-The source is a `t3.medium` (2 virtual central processing units). The replication appliance in variant A is a `c5.2xlarge` (8). Both have to run, so variant A needs 10. This rebuild stayed on Variant B because the applied value was still 8 at apply time. Variant A is now possible on a later pass. This pass did not create `ec2-migrate-repl-zeon`.
+The source is a `t3.medium` (2 virtual central processing units). The first Variant A appliance, `c5.2xlarge`, is 8 vCPUs and 4 cores; Azure Site Recovery failed that check. The size that later copied disks was `c5.4xlarge` (8 cores; AWS quota counts 16 vCPUs). Source plus that appliance need about 18. This folder was applied while the quota was still 8, as a comparison. Variant B failed the same core check and never copied a disk. Variant A later ran on AWS once the quota allowed it (`ec2-migrate-repl-zeon`, Protected / Healthy 2026-11-01, complete and torn down 2026-11-02).
 
 ## 2. East US family quota still forces one Azure appliance at a time
 
