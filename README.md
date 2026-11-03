@@ -2,7 +2,9 @@
 
 ## Watch the walkthrough
 
-The walkthrough isn't recorded yet.
+[![Watch the video](docs/images/loom-thumbnail.gif)](https://www.loom.com/share/8d2fbd4ae33b4ac6af3cfb42c0a76eee)
+
+Face on camera for the introduction, the architecture, and the close. Click the thumbnail to play.
 
 **Author:** Zeon Stewart, [LinkedIn](LINKEDIN_LINK_HERE)
 
@@ -470,6 +472,53 @@ There's no teardown script yet. The nightly sweep deletes Azure groups tagged `l
 This proof, 2026-11-02: `az group show` printed ResourceGroupNotFound for all three groups. `terraform state list` in `aws/`, `azure/`, and `variant-b-appliance-in-azure/` printed 0 resources. Microsoft Entra ID security defaults were turned back **on** in the portal (toast: Successfully enabled security defaults policy).
 
 ![three migrate resource groups gone and AWS Terraform state empty](docs/images/step-23-teardown.png)
+
+---
+
+## Repeat it by hand
+
+This is the shortest path to repeat the proof yourself, in the order that worked: the replication appliance on AWS beside the source (Variant A). The numbered **Project Steps** above explain each piece and show my screenshots. Use this section as the checklist while you work. Each line ends with a check you can run or read, so a screenshot is the record and not the only proof. Replace `zeon` with your own short name and keep passwords, keys, and addresses out of git.
+
+**Before you start**
+1. Install Terraform 1.15, the AWS command-line interface (CLI), and the Azure CLI. Sign in to both (`aws sts get-caller-identity`, `az account show`).
+2. Read the AWS quota. **Check:** the value is at least 18 for the `c5.4xlarge` appliance (see step 17). If it is lower, file one request and wait.
+   ```bash
+   aws service-quotas get-service-quota --service-code ec2 --quota-code L-1216C47A --region us-east-1 --query 'Quota.Value' --output text
+   ```
+3. Copy both `terraform.tfvars.example` files, replace `yourname`, and set the passwords with `scripts/gen-password.sh`. **Check:** `git check-ignore -v aws/terraform.tfvars azure/terraform.tfvars` names `.gitignore` for both.
+
+**Build the two sides**
+4. In `aws/`, set `replication_instance_enabled` to `false`, then `terraform plan` and `terraform apply`. **Check:** the plan said 9 to add. `./scripts/verify-aws.sh` passes the network and source lines. The discovery WinRM check waits until step 6.
+5. In `azure/`, `terraform plan` and `terraform apply`. **Check:** `az vm show -d -g rg-migrate-src-zeon01 -n vm-appl-zeon --query powerState -o tsv` prints `VM running`.
+6. Read the public address of `pip-appl-zeon`, put it in `aws/terraform.tfvars` as `discovery_winrm_cidr` with a `/32`, then `terraform apply -target=aws_security_group.source` in `aws/`. **Check:** the source security group lists TCP 5985 from that address.
+
+**Discover the source (portal plus Remote Desktop)**
+7. Create the Azure Migrate project in `rg-migrate-src-zeon01`, name the appliance, install it on `vm-appl-zeon`, and sign in (turn Microsoft Entra ID security defaults off first if error 530035 appears). **Check:** the portal shows the appliance connected.
+8. Add the source over Windows Remote Management with `migrateadmin`, validate, and start discovery. **Check:** the inventory lists one Windows server.
+
+**Replicate**
+9. In `aws/`, set `replication_instance_enabled` to `true`, `terraform plan` (12 to add), then `terraform apply`. **Check:** `./scripts/verify-aws.sh` passes with the appliance as `c5.4xlarge` and the 620 GiB cache disk.
+10. Remote Desktop to `ec2-migrate-repl-zeon`. **Check:** `Get-CimInstance Win32_Processor | Select NumberOfCores` prints 8 or more. Initialize and format the cache disk. **Check:** `Get-PSDrive` shows about 620 GB free. Then run `DRInstaller.ps1` with the key from the portal.
+11. In Azure Migrate, start replication for the discovered server into `rg-migrate-tgt-zeon01`, `vnet-migrate-zeon`, `snet-migrate`. **Check:** the item shows Protected and Healthy. This took until the afternoon of the next day on this proof.
+
+**Test, cut over, complete**
+12. Set the target size to `Standard_D2s_v4`, then run the test migration. **Check:** `az vm list -d -g rg-migrate-tgt-zeon01 --query "[].{n:name,s:powerState}" -o table` lists `src-zeon-test` running. Clean up the test migration afterward.
+13. Run the cutover. **Check:** the same command lists `src-zeon` running.
+14. Run Complete migration. **Check:** the Site Recovery jobs list shows Complete migration, Commit, and Failover as Succeeded, and `src-zeon` is still running.
+
+**Tear down**
+15. Follow [Step 23](#step-23-clean-up-when-youre-done): portal leftovers, then `azure/`, then `aws/` (Variant B first if you built it). **Check:** `az group exists -n rg-migrate-src-zeon01` (and the tgt and repl names) prints `false`. This command prints `0` for running project instances:
+
+    ```bash
+    aws ec2 describe-instances --region us-east-1 \
+      --filters Name=tag:project,Values=azure-aws-migrate-poc Name=instance-state-name,Values=running,pending \
+      --query 'length(Reservations[].Instances[])' --output text
+    ```
+
+    `terraform state list` is empty in each root.
+16. Turn Microsoft Entra ID security defaults back on.
+
+**What is not scripted yet.** `scripts/verify-aws.sh` checks only the AWS Terraform side. Nothing checks the Azure side, discovery, replication health, the test and cutover machines, or teardown. Those checks above are commands you run by hand. The lessons file lists what to script next time.
 
 ---
 
