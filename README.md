@@ -15,7 +15,7 @@ The walkthrough isn't recorded yet.
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
-The design picture below is the reference. The [Architecture](#architecture) diagram is the live map. If a name disagrees, the Terraform files win.
+The design picture below is the reference. The [Architecture](#architecture) diagram is the record of the proof. If a name disagrees, the Terraform files win.
 
 ![Design picture of the AWS source, the replication appliance, and the Azure target network](docs/architecture/architecture.png)
 
@@ -359,7 +359,7 @@ Azure Site Recovery counts Windows `NumberOfCores`, not cloud virtual CPUs. `c5.
 2. In `aws/`, run `terraform plan`, read it, then `terraform apply`. Confirm `ec2-migrate-repl-zeon` is running as `c5.4xlarge` with the 620 GiB cache disk.
 3. Remote Desktop to that instance (operator `/32` only). Initialize and format the cache disk before `DRInstaller.ps1`. The installer counts formatted free space only.
 
-This proof also built Variant B first, while the AWS limit was 8. Discovery (`vm-appl-zeon`) was deleted to free East US Standard DASv4. `vm-repl` ran, failed the 4-core check, and is deallocated. It did not take part in the copy.
+This proof also built Variant B first, while the AWS limit was 8. Discovery (`vm-appl-zeon`) was deleted to free East US Standard DASv4. `vm-repl` ran, failed the 4-core check, and was deallocated. It did not take part in the copy.
 
 ![variant B replication appliance running after discovery was freed](docs/images/step-17-variant-b-appliance.png)
 
@@ -582,23 +582,23 @@ No teardown script exists. See [Step 18](#step-18-clean-up-when-youre-done).
 flowchart LR
     operator["Your Mac<br/>Terraform and Remote Desktop"]
 
-    subgraph awsnet["AWS · us-east-1 · vpc-migrate-zeon"]
-        source["ec2-migrate-src-zeon<br/>source server · running"]
-        repl["ec2-migrate-repl-zeon<br/>replication appliance · c5.4xlarge · running"]
+    subgraph awsnet["AWS · us-east-1 · vpc-migrate-zeon · torn down Nov 2"]
+        source["ec2-migrate-src-zeon<br/>source server · torn down Nov 2"]
+        repl["ec2-migrate-repl-zeon<br/>replication appliance · c5.4xlarge · torn down Nov 2"]
     end
 
     subgraph azcloud["Azure · East US"]
-        subgraph staging["rg-migrate-src-zeon01 · lifetime=keep"]
+        subgraph staging["rg-migrate-src-zeon01 · lifetime=1d · torn down Nov 2"]
             discovery["vm-appl-zeon<br/>discovery appliance · deleted after discovery"]
-            migrate["Azure Migrate project<br/>made by hand in the portal"]
+            migrate["Azure Migrate project<br/>made by hand · completed Nov 2 · gone"]
         end
-        subgraph tgt["rg-migrate-tgt-zeon01 · lifetime=keep"]
+        subgraph tgt["rg-migrate-tgt-zeon01 · lifetime=1d · torn down Nov 2"]
             vnet["vnet-migrate-zeon · 10.6.0.0/16<br/>firewall nsg-migrate-tgt-zeon"]
-            landed["src-zeon<br/>migrated server · Standard_D2s_v4 · running"]
+            landed["src-zeon<br/>migrated server · Standard_D2s_v4 · torn down Nov 2"]
         end
-        vault["Vault and cache storage<br/>made by Azure Migrate"]
-        subgraph replrg["rg-migrate-repl-zeon01 · variant B"]
-            vmrepl["vm-repl<br/>failed core check · deallocated"]
+        vault["Vault and cache storage<br/>made by Azure Migrate · gone"]
+        subgraph replrg["rg-migrate-repl-zeon01 · variant B · torn down Nov 2"]
+            vmrepl["vm-repl<br/>failed core check · torn down Nov 2"]
         end
     end
 
@@ -622,16 +622,16 @@ flowchart LR
     class migrate,landed,vault portal
 ```
 
-*Live map, Nov 1. A solid arrow is in the files today. A dotted arrow is portal work or a service doing the work for us, and its label says which. Gray is AWS and your Mac. Blue is Azure. A dashed box was made in the portal or at cutover. The design picture above shows the same resources.*
+*Record of the proof, torn down 2026-11-02. A solid arrow is in the files. A dotted arrow is portal work or a service doing the work for us, and its label says which. Gray is AWS and your Mac. Blue is Azure. A dashed box was made in the portal or at cutover. The design picture above shows the same resources.*
 
 ### How to read this diagram
 
 - The operator reaches Windows machines only on TCP 3389, and only from the address collected at plan time.
 - The source and the replication appliance share `10.0.1.0/24`. The appliance installs the Mobility service on the source over TCP 445, 135, and 5985, plus the dynamic remote procedure call range 49152 to 65535 that Windows then uses.
-- `vm-appl-zeon` read the source over WinRM, then was deleted (only that machine; the Migrate project stays) to free the Standard DASv4 family count for variant B. Discovery is why `src-zeon` is in the inventory.
+- `vm-appl-zeon` read the source over WinRM, then was deleted (only that machine; the Migrate project stayed until teardown) to free the Standard DASv4 family count for variant B. Discovery is why `src-zeon` is in the inventory.
 - The replication appliance is `ec2-migrate-repl-zeon`, a `c5.4xlarge`. Azure Site Recovery counts Windows cores, not virtual CPUs: `c5.2xlarge` and the Azure appliance sizes showed 4 cores and failed the check, while `c5.4xlarge` showed 8 and passed.
-- The vault, the cache storage account, and the migrated server `src-zeon` are created by Azure Migrate. Terraform doesn't declare them. `src-zeon` was running as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` after cutover on Nov 1. The test copy `src-zeon-test` was cleaned up.
-- Variant B is a separate Terraform folder with its own state. `vm-repl` failed the same core check (4 cores on `Standard_D8ds_v4`), is deallocated, and played no part in the copy.
+- The vault, the cache storage account, and the migrated server `src-zeon` were created by Azure Migrate. Terraform doesn't declare them. `src-zeon` was running as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` after cutover on Nov 1. Complete migration succeeded on Nov 2. The test copy `src-zeon-test` was cleaned up.
+- Variant B is a separate Terraform folder with its own state. `vm-repl` failed the same core check (4 cores on `Standard_D8ds_v4`), was deallocated, played no part in the copy, and was torn down with its group.
 - Teardown ran 2026-11-02. The three Azure groups are gone. `lifetime` in `tags.tf` is back to `1d`.
 
 ---
