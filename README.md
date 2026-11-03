@@ -467,7 +467,7 @@ Tear every side down after the portal work and remaining screenshots. This proof
 
 There's no teardown script yet. The nightly sweep deletes Azure groups tagged `lifetime=1d`, but it does not remove Entra app registrations, and it does not destroy the AWS network.
 
-This proof, 2026-11-02: `az group show` printed ResourceGroupNotFound for all three groups. `terraform state list` in `aws/`, `azure/`, and `variant-b-appliance-in-azure/` printed 0 resources. Microsoft Entra ID security defaults were not confirmed from the CLI (Graph token missing scope).
+This proof, 2026-11-02: `az group show` printed ResourceGroupNotFound for all three groups. `terraform state list` in `aws/`, `azure/`, and `variant-b-appliance-in-azure/` printed 0 resources. Microsoft Entra ID security defaults were turned back **on** in the portal (toast: Successfully enabled security defaults policy).
 
 ![three migrate resource groups gone and AWS Terraform state empty](docs/images/step-23-teardown.png)
 
