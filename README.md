@@ -11,7 +11,7 @@ The walkthrough isn't recorded yet.
 - **What it is:** a Windows Server on Amazon Web Services (AWS) that Azure Migrate will discover, replicate, and cut over into an Azure virtual network.
 - **What's automated:** Terraform declares the AWS network, the source server, the replication appliance, the Azure network, and the discovery virtual machine. The replication appliance stays out of the first apply while the Standard virtual CPU quota is below 10. The Migrate project, the appliance installer, and the cutover are still portal steps.
 - **Why it's secure:** Remote Desktop is limited to the operator's current public address. Discovery uses a local Windows account over Windows Remote Management (WinRM). No AWS access key is stored for discovery.
-- **Result so far:** discovery completed (WinRM validate, inventory shows `src-zeon`). Replication was **Protected** / **Healthy** on Variant A (`ec2-migrate-repl-zeon` / `replapplzeon01`) on 2026-11-01 (last synchronized 3:15:56 PM) before the test migration and cutover. Test migration booted `src-zeon-test` as `Standard_D2s_v4` in `vnet-migrate-zeon` / `snet-migrate`. Cutover left `src-zeon` **Running** as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` (2026-11-01). The portal item is now in a post-cutover commit-pending state; the migration has not been marked complete. Variant B (`vm-repl`) failed Azure Site Recovery's core check (`NumberOfCores=4` on `Standard_D8ds_v4`).
+- **Result so far:** discovery completed (WinRM validate, inventory shows `src-zeon`). Replication was **Protected** / **Healthy** on Variant A (`ec2-migrate-repl-zeon` / `replapplzeon01`) on 2026-11-01 (last synchronized 3:15:56 PM) before the test migration and cutover. Test migration booted `src-zeon-test` as `Standard_D2s_v4` in `vnet-migrate-zeon` / `snet-migrate`. Cutover left `src-zeon` **Running** as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` (2026-11-01). The migration was completed on 2026-11-02; the replicated item no longer exists. Teardown ran the same day: `rg-migrate-src-zeon01`, `rg-migrate-tgt-zeon01`, and `rg-migrate-repl-zeon01` are gone; AWS Terraform state is empty. Variant B (`vm-repl`) failed Azure Site Recovery's core check (`NumberOfCores=4` on `Standard_D8ds_v4`).
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
@@ -371,6 +371,8 @@ This proof also built Variant B first, while the AWS limit was 8. Discovery (`vm
 
 ![ASR Memory and CPU validation succeeded on c5.4xlarge](docs/images/step-20-variant-a-prereqs-passed.png)
 
+![AWS source t3.medium and replication appliance c5.4xlarge both running](docs/images/step-18-aws-both-running.png)
+
 ### Step 19: Open the copy path on the source subnet
 
 *Terraform on AWS. Without these rules, the Mobility service cannot install or send disks.*
@@ -445,12 +447,17 @@ Register with the project key (device-code Login; turn Entra security defaults o
 1. In Azure Migrate, run **Migrate** / cutover for `src-zeon` into `rg-migrate-tgt-zeon01` and `vnet-migrate-zeon`. This proof used UnplannedFailover. `performShutdown` is not a valid parameter on that call; the AWS source was left running.
 2. Wait until a Windows virtual machine exists in that resource group and shows as running.
 3. Confirm it is the cutover result (`src-zeon`), not only the test leftover (`src-zeon-test`). This proof: `src-zeon` **Running**, `Standard_D2s_v4`, `vnet-migrate-zeon` / `snet-migrate`. Crop subscription ids and addresses.
+4. Run **Complete migration** (failover commit, then disable protection with reason MigrationComplete). This proof: Site Recovery jobs **Complete migration**, **Commit**, and **Failover** all **Succeeded** for `src-zeon` on 2026-11-02. The replicated items list is empty afterward. `src-zeon` in `rg-migrate-tgt-zeon01` stays **Running**. Crop the account bar.
 
 ![cutover virtual machine src-zeon running in rg-migrate-tgt-zeon01](docs/images/step-22-cutover.png)
 
+![Site Recovery jobs Complete migration Succeeded for src-zeon](docs/images/step-22-complete-migration.png)
+
+![target resource group rg-migrate-tgt-zeon01 with src-zeon, its disk, and its network interface](docs/images/step-22-target-group-resources.png)
+
 ### Step 23: Clean up when you're done
 
-Tear every side down after the portal work, remaining screenshots, and the walkthrough video are finished. The discovery and replication appliances bill by the hour. If you have to pause overnight, set `lifetime=keep` on the Azure groups (and in `azure/tags.tf` plus `variant-b-appliance-in-azure/tags.tf`) so the nightly sweep does not delete them. Set those tags back to `1d` in the same change as destroy.
+Tear every side down after the portal work and remaining screenshots. This proof tore down on 2026-11-02, before the walkthrough (Flow C: dated shots, README, files). The discovery and replication appliances bill by the hour. If you have to pause overnight, set `lifetime=keep` on the Azure groups (and in `azure/tags.tf` plus `variant-b-appliance-in-azure/tags.tf`) so the nightly sweep does not delete them. Set those tags back to `1d` in the same change as destroy.
 
 1. In the portal, remove Migrate discoveries / replications / appliances you created if the portal still lists them, and delete any cutover or test virtual machines you no longer need.
 2. If you used Variant B: `terraform destroy` in `variant-b-appliance-in-azure/`.
@@ -460,7 +467,9 @@ Tear every side down after the portal work, remaining screenshots, and the walkt
 
 There's no teardown script yet. The nightly sweep deletes Azure groups tagged `lifetime=1d`, but it does not remove Entra app registrations, and it does not destroy the AWS network.
 
-<!-- ![both resource groups gone after teardown](docs/images/step-23-teardown.png) -->
+This proof, 2026-11-02: `az group show` printed ResourceGroupNotFound for all three groups. `terraform state list` in `aws/`, `azure/`, and `variant-b-appliance-in-azure/` printed 0 resources. Microsoft Entra ID security defaults were not confirmed from the CLI (Graph token missing scope).
+
+![three migrate resource groups gone and AWS Terraform state empty](docs/images/step-23-teardown.png)
 
 ---
 
@@ -623,7 +632,7 @@ flowchart LR
 - The replication appliance is `ec2-migrate-repl-zeon`, a `c5.4xlarge`. Azure Site Recovery counts Windows cores, not virtual CPUs: `c5.2xlarge` and the Azure appliance sizes showed 4 cores and failed the check, while `c5.4xlarge` showed 8 and passed.
 - The vault, the cache storage account, and the migrated server `src-zeon` are created by Azure Migrate. Terraform doesn't declare them. `src-zeon` was running as `Standard_D2s_v4` in `rg-migrate-tgt-zeon01` after cutover on Nov 1. The test copy `src-zeon-test` was cleaned up.
 - Variant B is a separate Terraform folder with its own state. `vm-repl` failed the same core check (4 cores on `Standard_D8ds_v4`), is deallocated, and played no part in the copy.
-- Teardown has not run. Both Azure groups are tagged `lifetime=keep` until the walkthrough is recorded.
+- Teardown ran 2026-11-02. The three Azure groups are gone. `lifetime` in `tags.tf` is back to `1d`.
 
 ---
 
@@ -686,10 +695,10 @@ A Windows server on AWS can be moved into Azure as a physical server: Azure disc
 | 1 | The AWS plan lists the network and the source while the appliance switch is off, and lists the appliance and the 620 GiB cache disk when the switch is on | `terraform plan` in `aws/` | Not checked |
 | 2 | Remote Desktop on both clouds accepts only the operator `/32` | security group and NSG rules, then a connection from that address | Not checked |
 | 3 | Discovery finds `src-zeon` over WinRM with `migrateadmin` | Azure Migrate inventory, with no AWS access key in the repo | Passed 2026-10-30: inventory shows `src-zeon` (step 16) |
-| 4 | Replication copies disk changes through the replication appliance (Variant A: `ec2-migrate-repl-zeon`; Variant B: `vm-repl`) | Azure Migrate replication health | Passed 2026-11-01: `src-zeon` was Status **Protected**, Health **Healthy** (step 20, last synchronized 3:15:56 PM) before the test migration and cutover. Variant A `ec2-migrate-repl-zeon` / `replapplzeon01`. The portal item is now post-cutover commit-pending; the migration has not been marked complete. |
+| 4 | Replication copies disk changes through the replication appliance (Variant A: `ec2-migrate-repl-zeon`; Variant B: `vm-repl`) | Azure Migrate replication health | Passed 2026-11-01: `src-zeon` was Status **Protected**, Health **Healthy** (step 20, last synchronized 3:15:56 PM) before the test migration and cutover. Variant A `ec2-migrate-repl-zeon` / `replapplzeon01`. That replicated item no longer exists after Complete migration on 2026-11-02. |
 | 5 | A test migration boots in `vnet-migrate-zeon` | the test virtual machine on `snet-migrate` | Passed 2026-11-01: `src-zeon-test` **Running**, size `Standard_D2s_v4`, subnet `vnet-migrate-zeon` / `snet-migrate` (step 21). Test virtual machine cleaned up after the shot. |
-| 6 | Cutover leaves the server in `rg-migrate-tgt-zeon01` | the resource group after cutover | Passed 2026-11-01: `src-zeon` **Running**, size `Standard_D2s_v4`, subnet `vnet-migrate-zeon` / `snet-migrate` (step 22). Not the test leftover (`src-zeon-test` was deleted). |
-| 7 | Teardown removes the AWS instances and the Azure groups (including `rg-migrate-repl-zeon01` when Variant B was used) | `terraform destroy` in each root that was applied, then `az group delete` for leftovers | Not checked |
+| 6 | Cutover leaves the server in `rg-migrate-tgt-zeon01` | the resource group after cutover | Passed 2026-11-01: `src-zeon` **Running**, size `Standard_D2s_v4`, subnet `vnet-migrate-zeon` / `snet-migrate` (step 22). Not the test leftover (`src-zeon-test` was deleted). Migration completed 2026-11-02: Site Recovery job **Complete migration** Succeeded; replicated items list empty; `src-zeon` still **Running**. |
+| 7 | Teardown removes the AWS instances and the Azure groups (including `rg-migrate-repl-zeon01` when Variant B was used) | `terraform destroy` in each root that was applied, then `az group delete` for leftovers | Passed 2026-11-02: `az group show` ResourceGroupNotFound for `rg-migrate-src-zeon01`, `rg-migrate-tgt-zeon01`, and `rg-migrate-repl-zeon01`. AWS and Variant B destroy printed Destroy complete. All three Terraform states empty (step 23). |
 
 ## What's in this repository
 
@@ -750,7 +759,7 @@ docs/architecture/
 - **Replication ports stay inside the subnet.** TCP 443 and 9443 on the appliance, and TCP 445, 135, and 5985 on the source, allow `10.0.1.0/24` only.
 - **Disks are unencrypted on purpose.** EBS encryption by default was off. Turning it on would change the volume AWS presents to Azure Migrate, so both the source disk and the cache disk set `encrypted = false`.
 - **Outbound is two ports, on one address.** The subnet firewall allows TCP 443 to Azure and the public internet, and TCP 5985 to the public internet. `pip-appl-zeon` is the Standard static address that carries it. `nic-appl-zeon` joins that address to `snet-migrate`, and `vm-appl-zeon` attaches that interface.
-- **Azure groups are short-lived except during an overnight hold.** Default is `lifetime=1d` so the nightly sweep can delete them. This pass is tagged `keep` until the remaining portal work and the video are done, then tags go back to `1d` in the same change as destroy. The state file stays local.
+- **Azure groups are short-lived except during an overnight hold.** Default is `lifetime=1d` so the nightly sweep can delete them. This pass used `keep` overnight, then tags went back to `1d` in the same change as destroy. The state file stays local.
 
 ## Cost
 
