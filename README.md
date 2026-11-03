@@ -57,11 +57,11 @@ File an increase only when the applied value cannot hold the source plus the app
 aws service-quotas request-service-quota-increase \
   --service-code ec2 \
   --quota-code L-1216C47A \
-  --desired-value 10 \
+  --desired-value 18 \
   --region us-east-1
 ```
 
-`replication_instance_enabled` stays false until that applied value is at least 10. An apply then creates the network and the source only. Discovery uses the source and the Azure appliance. It doesn't use the replication appliance, and moving that appliance into Azure doesn't remove the requirement.
+`replication_instance_enabled` stays false until that applied value can hold the source and the appliance (18 for `c5.4xlarge`). An apply then creates the network and the source only. Discovery uses the source and the Azure appliance. It doesn't use the replication appliance, and moving that appliance into Azure doesn't remove the requirement.
 
 ### Step 1: Keep secrets off GitHub
 
@@ -325,7 +325,7 @@ Confirm the source security group allows TCP 5985 from the discovery appliance (
 
 ### Step 17: Check the replication quota and choose a path
 
-Replication needs a separate appliance beside the source. Before you create it, read the AWS On-Demand Standard virtual CPU quota (`L-1216C47A` in `us-east-1`). The source is 2 vCPUs and the preferred appliance is 8; both must run, so the applied value has to be at least **10**.
+Replication needs a separate appliance beside the source. Before you create it, read the AWS On-Demand Standard virtual CPU quota (`L-1216C47A` in `us-east-1`). The source is 2 vCPUs and the preferred appliance is 8; both must run, so on paper the applied value has to be at least **10**. The size that passes the core check counts 16 vCPUs, so plan on **18**.
 
 ```bash
 aws service-quotas get-service-quota \
@@ -342,8 +342,8 @@ Then choose one path:
 
 | Applied value | Path | Where to go |
 |---|---|---|
-| **10 or more** (this proof after the increase) | **Variant A** (preferred, and the path that completed): replication appliance on AWS next to the source | steps 18 through 22 below, then [Variant A: appliance on AWS](#variant-a-appliance-on-aws) |
-| **Below 10** (this proof at first apply: 8) | **Variant B** (comparison): leave the AWS appliance off; put a replication appliance in Azure after discovery is deallocated | [Variant B: appliance in Azure](#variant-b-appliance-in-azure) |
+| **18 or more** for `c5.4xlarge`, the size that passed (10 holds only the `c5.2xlarge`, which failed the core check). This proof after the increase | **Variant A** (preferred, and the path that completed): replication appliance on AWS next to the source | steps 18 through 22 below, then [Variant A: appliance on AWS](#variant-a-appliance-on-aws) |
+| **Below 18** (this proof at first apply: 8) | **Variant B** (comparison): leave the AWS appliance off; put a replication appliance in Azure after discovery is deallocated | [Variant B: appliance in Azure](#variant-b-appliance-in-azure) |
 
 ![Standard on-demand vCPU quota still below 10](docs/images/step-17-replication-quota.png)
 
